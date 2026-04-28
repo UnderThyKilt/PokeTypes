@@ -1,0 +1,13 @@
+# Built artifacts
+build/
+.gradle/
+
+# Local config (contains SDK path — machine-specific)
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Misc
+test
