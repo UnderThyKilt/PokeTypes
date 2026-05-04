@@ -63,9 +63,8 @@ class QuizViewModel(
     private fun QuizQuestion.withPokemon(): QuizQuestion {
         if (presentationMode != PresentationMode.POKEMON) return this
         return copy(
-            attackingPokemon  = randomPokemonForType(attackingType),
-            defendingPokemon  = randomPokemonForType(defendingType),
-            defendingPokemon2 = defendingType2?.let { randomPokemonForType(it) },
+            attackingPokemon = randomPokemonForType(attackingType),
+            defendingPokemon = randomPokemonForType(defendingType),
         )
     }
 

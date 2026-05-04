@@ -115,24 +115,20 @@ fun QuizContent(
                 Spacer(Modifier.height(8.dp))
                 val def2 = q.defendingType2
                 if (def2 != null) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (pokemonMode && q.defendingPokemon != null) {
-                            PokemonCard(q.defendingPokemon, q.defendingType)
-                        } else {
+                    if (pokemonMode && q.defendingPokemon != null) {
+                        PokemonCard(q.defendingPokemon, q.defendingType, def2)
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             TypeBadge(q.defendingType, large = true)
-                        }
-                        Text(
-                            " / ",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                        if (pokemonMode && q.defendingPokemon2 != null) {
-                            PokemonCard(q.defendingPokemon2, def2)
-                        } else {
+                            Text(
+                                " / ",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
                             TypeBadge(def2, large = true)
                         }
                     }
@@ -252,7 +248,7 @@ fun QuizContent(
 }
 
 @Composable
-private fun PokemonCard(pokemon: PokemonEntry, type: PokemonType) {
+private fun PokemonCard(pokemon: PokemonEntry, type: PokemonType, type2: PokemonType? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -264,7 +260,20 @@ private fun PokemonCard(pokemon: PokemonEntry, type: PokemonType) {
         )
         Spacer(Modifier.width(6.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TypeBadge(type, large = true)
+            if (type2 != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TypeBadge(type, large = true)
+                    Text(
+                        " / ",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    )
+                    TypeBadge(type2, large = true)
+                }
+            } else {
+                TypeBadge(type, large = true)
+            }
             Text(
                 pokemon.name,
                 fontSize = 10.sp,
