@@ -13,9 +13,13 @@ fun effectivenessColor(mult: Float): Color = when (mult) {
     else -> Color(0xFF2A2A3A)
 }
 
-fun scoreColor(score: Int): Color = when {
-    score >= 9 -> CorrectGreen
-    score >= 7 -> Color(0xFFC8960C)
-    score >= 5 -> Color(0xFFE65100)
-    else -> WrongRed
+fun scoreColor(score: Int, total: Int = 10): Color {
+    if (total == 0) return WrongRed
+    val pct = score * 100 / total
+    return when {
+        pct >= 90 -> CorrectGreen
+        pct >= 70 -> Color(0xFFC8960C)
+        pct >= 50 -> Color(0xFFE65100)
+        else      -> WrongRed
+    }
 }

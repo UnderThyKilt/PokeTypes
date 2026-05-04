@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.underthykilt.poketypes.data.QUIZ_LENGTH
 import com.underthykilt.poketypes.data.multiplierLabel
 import com.underthykilt.poketypes.data.performanceMessage
 import com.underthykilt.poketypes.ui.components.TypeBadge
@@ -64,17 +63,19 @@ fun ResultsScreen(
                 modifier = Modifier.fillMaxWidth().padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                val total = state.quizLength ?: state.questions.size
                 Text("Quiz Complete!", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "${state.correctAnswers} / $QUIZ_LENGTH",
+                    if (state.quizLength != null) "${state.correctAnswers} / $total"
+                    else "${state.correctAnswers} correct",
                     fontSize = 52.sp,
                     fontWeight = FontWeight.Bold,
-                    color = scoreColor(state.correctAnswers)
+                    color = scoreColor(state.correctAnswers, total)
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    performanceMessage(state.correctAnswers),
+                    performanceMessage(state.correctAnswers, total),
                     fontSize = 17.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                 )
@@ -193,44 +194,45 @@ fun ResultsScreen(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
-
-        Text(
-            "Recent Scores",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-        )
-        Spacer(Modifier.height(8.dp))
-        if (state.history.isEmpty()) {
+        if (state.quizLength != null) {
+            Spacer(Modifier.height(24.dp))
             Text(
-                "No previous scores",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+                "Recent Scores",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
-        } else {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                state.history.forEachIndexed { i, score ->
-                    val isCurrent = i == state.history.size - 1
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(scoreColor(score), CircleShape)
-                            .then(
-                                if (isCurrent) Modifier.border(2.5.dp, Color.White, CircleShape)
-                                else Modifier
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "$score",
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+            Spacer(Modifier.height(8.dp))
+            if (state.history.isEmpty()) {
+                Text(
+                    "No previous scores",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+                )
+            } else {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    state.history.forEachIndexed { i, score ->
+                        val isCurrent = i == state.history.size - 1
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(scoreColor(score, state.quizLength), CircleShape)
+                                .then(
+                                    if (isCurrent) Modifier.border(2.5.dp, Color.White, CircleShape)
+                                    else Modifier
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "$score",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

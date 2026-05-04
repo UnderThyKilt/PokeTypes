@@ -21,6 +21,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.underthykilt.poketypes.data.QUIZ_LENGTH
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.data.multiplierLabel
 import com.underthykilt.poketypes.ui.components.TypeBadge
@@ -49,12 +49,14 @@ fun QuizContent(
     paddingValues: PaddingValues,
     onSelectAnswer: (Float) -> Unit,
     onAdvance: () -> Unit,
+    onEndQuiz: () -> Unit,
 ) {
     val q = state.questions[state.questionIndex]
     val choices = if (quizMode == QuizMode.SINGLE) SINGLE_CHOICES else DOUBLE_CHOICES
     val answered = state.selected != null
     val answeredCorrectly = state.selected == q.correctAnswer
-    val isLastQuestion = state.questionIndex == QUIZ_LENGTH - 1
+    val isEndless = state.quizLength == null
+    val isLastQuestion = !isEndless && state.questionIndex == (state.quizLength ?: 0) - 1
 
     Column(
         modifier = Modifier
@@ -153,13 +155,13 @@ fun QuizContent(
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         style = TextStyle(drawStyle = Stroke(width = 6f)),
-                        color = Color(0xFF1A1A2E)
+                        color = MaterialTheme.colorScheme.surface
                     )
                     Text(
                         multiplierLabel(choice),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -194,23 +196,35 @@ fun QuizContent(
                         fontSize = 16.sp
                     )
                 }
+                if (isEndless) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onEndQuiz,
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text("End Quiz", fontSize = 15.sp)
+                    }
+                }
             }
         }
 
         Spacer(Modifier.height(20.dp))
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(QUIZ_LENGTH) { i ->
-                val dotColor = when {
-                    i < state.questionResults.size -> if (state.questionResults[i]) CorrectGreen else WrongRed
-                    i == state.questionIndex && answered ->
-                        if (answeredCorrectly) CorrectGreen else WrongRed
-                    else -> Color.Gray.copy(alpha = 0.35f)
+        if (!isEndless) {
+            val quizLen = state.quizLength ?: 0
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(quizLen) { i ->
+                    val dotColor = when {
+                        i < state.questionResults.size -> if (state.questionResults[i]) CorrectGreen else WrongRed
+                        i == state.questionIndex && answered ->
+                            if (answeredCorrectly) CorrectGreen else WrongRed
+                        else -> Color.Gray.copy(alpha = 0.35f)
+                    }
+                    Box(Modifier.size(if (quizLen > 10) 7.dp else 10.dp).background(dotColor, CircleShape))
                 }
-                Box(Modifier.size(10.dp).background(dotColor, CircleShape))
             }
         }
     }

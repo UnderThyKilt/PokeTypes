@@ -9,24 +9,47 @@
 | Language | Kotlin 2.0.21 |
 | UI | Jetpack Compose (BOM 2024.10.01) |
 | Material Design | Material3 |
-| Navigation | Navigation Compose 2.8.4 |
-| Persistence | SharedPreferences |
+| Navigation | Navigation Compose 2.8.4 (type-safe, `@Serializable`) |
+| Serialization | kotlinx.serialization 1.7.3 |
+| Persistence | DataStore Preferences 1.1.1 |
+| Database | Room 2.7.1 (KSP 2.0.21-1.0.28) |
+| ViewModel | lifecycle-viewmodel-compose 2.8.7 |
 | Min SDK | 26 (Android 8.0) |
-| Target / Compile SDK | 37 (Android 14) |
+| Target / Compile SDK | 37 (Android 15) |
+| Java target | 11 |
+| Theming | Light + dark mode (user-toggleable, persisted in DataStore) |
 
 ### Package Structure
 
 ```
 com.underthykilt.poketypes/
-├── MainActivity.kt              # Single activity, NavHost, top-level state
+├── MainActivity.kt              # Single activity, NavHost, edge-to-edge setup
 ├── data/
 │   ├── TypeChart.kt             # PokemonType, Generation enums; chart logic
-│   └── ScoreHistory.kt          # SharedPreferences persistence singleton
+│   ├── QuizLogic.kt             # generateQuestion(), scoring helpers
+│   ├── Difficulty.kt            # Difficulty enum (NORMAL/HARD) + filteredTypes()
+│   ├── ThemeRepository.kt       # Dark/light preference persisted in DataStore
+│   ├── ScoreRepository.kt       # ScoreRepository interface + DataStoreScoreRepository
+│   ├── TypeStatEntity.kt        # Room entity: one row per answered question
+│   ├── TypeStatDao.kt           # Room DAO + TypeAccuracyRow projection
+│   ├── TypeStatDatabase.kt      # RoomDatabase singleton
+│   └── TypeStatRepository.kt    # TypeStatRepository interface + RoomTypeStatRepository
 └── ui/
-    ├── HomeScreen.kt            # Generation selector, mode buttons
+    ├── HomeScreen.kt            # Generation selector, mode buttons, score history
     ├── StudyScreen.kt           # 18×18 scrollable type chart grid
-    ├── QuizScreen.kt            # Quiz engine, results screen, TypeBadge
+    ├── components/
+    │   └── TypeBadge.kt         # Reusable type badge shared across screens
+    ├── navigation/
+    │   └── Routes.kt            # Type-safe serializable route objects
+    ├── stats/
+    │   ├── StatsViewModel.kt    # Combines attacking/defending accuracy flows
+    │   └── StatsScreen.kt       # Per-type accuracy bars, attacking/defending tabs
+    ├── quiz/
+    │   ├── QuizViewModel.kt     # AndroidViewModel; owns QuizState via StateFlow
+    │   ├── QuizContent.kt       # Active question card, answer buttons, progress
+    │   └── ResultsScreen.kt     # Score card, wrong-answer review, history row
     └── theme/
+        ├── Colors.kt            # Effectiveness colors, quiz/study palette
         └── Theme.kt             # Dark color scheme, PokeTypesTheme
 ```
 
@@ -34,74 +57,20 @@ com.underthykilt.poketypes/
 
 ```
 MainActivity
-  └── NavHost
-        ├── "home"  → HomeScreen  (reads: generation, quizMode state)
-        ├── "study" → StudyScreen (reads: generation)
-        └── "quiz"  → QuizScreen  (reads: generation, quizMode)
-                          └── ScoreHistory.save/load → SharedPreferences
+  └── NavHost (type-safe routes)
+        ├── HomeRoute   → HomeScreen
+        ├── StudyRoute  → StudyScreen (receives generationName)
+        └── QuizRoute   → QuizScreen  (receives generationName, quizModeName)
+                              └── QuizViewModel (StateFlow<QuizState>)
+                                    └── ScoreRepository → DataStore
 ```
 
 State lives in two places:
-- **Activity level** — `generation` and `quizMode` (`remember { mutableStateOf(...) }` in `MainActivity.kt`)
-- **Composable level** — 9 independent state variables inside `QuizScreen` (lines 85–101)
 
-### What Works Well
+- **ViewModel** — `QuizState` (all quiz state) exposed as a single `StateFlow` from `QuizViewModel`
+- **Route arguments** — `generation` and `quizMode` are passed as typed navigation arguments; no activity-level mutable state
 
-- **Correct domain models** — `PokemonType`, `Generation`, and `QuizQuestion` are clear and well-named
-- **Accurate type chart** — all 143 matchup entries across three generations are hardcoded and correct, including Gen 1 quirks (Ghost→Psychic = 0×)
-- **Reusable UI components** — `SegmentedSelector<T>` is generic and clean
-- **Lean dependency footprint** — only Compose, Navigation, and Material3; no unnecessary libraries
-- **Offline-first** — no network requirements, works anywhere
-
----
-
-## 2. Known Limitations
-
-The following issues are specific to current source files. Each has a concrete impact on maintainability or correctness.
-
-| Issue | Location | Impact |
-|-------|----------|--------|
-| No ViewModel — state lives in Activity | `MainActivity.kt` | Quiz progress lost on device rotation |
-| 9 loose mutable state vars | `QuizScreen.kt:85–101` | Hard to reason about; impossible to unit test without Compose |
-| 551-line monolithic `QuizScreen` | `QuizScreen.kt` | Mixes quiz logic, active question UI, and results rendering in one composable |
-| `SharedPreferences` accessed directly in UI | `QuizScreen.kt:85`, `ScoreHistory.kt` | Tight coupling to Android framework; not injectable or mockable |
-| Hardcoded colors outside theme | `HomeScreen.kt:73`, `StudyScreen.kt:166–171`, `QuizScreen.kt:41–42` | Theme changes require editing multiple files; colors are inconsistent |
-| String-based navigation routes | `MainActivity.kt:32–61` | A typo in `"home"`, `"study"`, or `"quiz"` causes a runtime crash, not a compile error |
-| No unit tests | — | Logic regressions (type chart edits, scoring changes) go undetected |
-| `isMinifyEnabled = false` in release | `app/build.gradle.kts:20` | Release APK is larger and unobfuscated |
-| Java 1.8 target | `app/build.gradle.kts:29–33` | Cuts off modern JVM language features available from Java 11+ |
-| All UI strings hardcoded in Kotlin | All `ui/` files | Localization is not possible without rewriting composables |
-| No `contentDescription` on type badges | `QuizScreen.kt:532–550` | Screen readers cannot identify type names in quiz and study views |
-
----
-
-## 3. Proposed Improvements
-
-Improvements are grouped into four tiers. Tier 1 changes unblock everything else; later tiers can be done independently in any order.
-
----
-
-### Tier 1 — Structural Changes
-
-These address the biggest blockers: rotation resilience and testability. No new libraries required.
-
-#### 1.1 ViewModel per screen
-
-Add `QuizViewModel` to own quiz state and logic. Move `generateQuestion()`, scoring, and streak tracking out of the composable.
-
-```
-ui/
-├── quiz/
-│   ├── QuizViewModel.kt     # new
-│   ├── QuizScreen.kt        # trimmed — only UI
-│   └── QuizState.kt         # new data class (see 1.2)
-```
-
-`lifecycle-viewmodel-compose` is already available transitively through the Compose BOM — no new dependency needed.
-
-#### 1.2 `QuizState` data class
-
-Replace the 9 independent state variables at `QuizScreen.kt:85–101` with a single immutable state holder:
+### `QuizState` Data Class
 
 ```kotlin
 data class QuizState(
@@ -110,134 +79,61 @@ data class QuizState(
     val selected: Float? = null,
     val correctAnswers: Int = 0,
     val streak: Int = 0,
-    val results: List<Boolean> = emptyList(),
+    val questionResults: List<Boolean> = emptyList(),
     val userAnswers: List<Float> = emptyList(),
     val quizComplete: Boolean = false,
+    val history: List<Int> = emptyList(),
 )
 ```
 
-The ViewModel exposes a single `StateFlow<QuizState>` and handles all mutations. `resetKey` (the current reset hack) is replaced by re-instantiating the ViewModel or calling a `reset()` function.
+### What Works Well
 
-#### 1.3 Type-safe navigation
-
-Replace the three string routes in `MainActivity.kt:32–61` with typed objects. Navigation 2.8.4 already supports this via `@Serializable`:
-
-```kotlin
-@Serializable object Home
-@Serializable data class Study(val generation: String)
-@Serializable data class Quiz(val generation: String, val mode: String)
-```
-
-This makes broken routes a compile error instead of a runtime crash.
-
----
-
-### Tier 2 — Clean-up
-
-These improve maintainability. No new libraries needed.
-
-#### 2.1 Split `QuizScreen.kt`
-
-The 551-line file should become three composables:
-
-| File | Responsibility |
-|------|---------------|
-| `ui/quiz/QuizContent.kt` | Active question card, answer buttons, streak, progress dots |
-| `ui/quiz/ResultsScreen.kt` | Score card, wrong answers review, history row, action buttons |
-| `ui/components/TypeBadge.kt` | Standalone type badge — shared between quiz and study |
-
-#### 2.2 Consolidate effectiveness colors into the theme
-
-Colors defined in three different files should move to one place:
-
-- `CORRECT_GREEN` (`QuizScreen.kt:41`) → `Theme.kt` or `ui/theme/Colors.kt`
-- `WRONG_RED` (`QuizScreen.kt:42`) → same
-- `effectivenessColor()` (`StudyScreen.kt:166–171`) → same
-- Magic purple `Color(0xFF7038F8)` (`HomeScreen.kt:73`) → add as `quizDual` in the color scheme
-
-#### 2.3 Repository abstraction for score history
-
-Introduce an interface so the storage backend can be swapped without touching the UI:
-
-```kotlin
-// data/repository/ScoreRepository.kt
-interface ScoreRepository {
-    fun save(mode: String, score: Int)
-    fun load(mode: String): List<Int>
-}
-
-// data/repository/SharedPreferencesScoreRepository.kt
-class SharedPreferencesScoreRepository(context: Context) : ScoreRepository { ... }
-```
-
-The ViewModel receives a `ScoreRepository`, not a raw `Context`.
-
-#### 2.4 String resources
-
-Move all hardcoded UI strings to `res/values/strings.xml`. Currently only `app_name` is a resource. Labels like `"Master the type chart"`, `"Single Type Quiz"`, `"How effective is"`, and all performance messages (`"Perfect!"`, `"Great job!"`, etc.) are hardcoded Kotlin strings. This is required for localization.
+- **Correct domain models** — `PokemonType`, `Generation`, and `QuizQuestion` are clear and well-named
+- **Accurate type chart** — all 143 matchup entries across three generations are hardcoded and correct, including Gen 1 quirks (Ghost→Psychic = 0×)
+- **MVVM structure** — `QuizViewModel` owns all quiz state; composables are stateless receivers
+- **Type-safe navigation** — broken routes are a compile error, not a runtime crash
+- **Repository abstraction** — `ScoreRepository` and `ThemeRepository` decouple storage from UI; DataStore backends are async-safe
+- **Light/dark mode** — user-toggleable theme persisted in DataStore; all colors use `MaterialTheme.colorScheme` tokens
+- **Difficulty setting** — Normal (10 core types) and Hard (all generation types); threaded through routes and ViewModel
+- **Per-type statistics** — every answered question recorded in Room; Stats screen shows attacking/defending accuracy per type, sorted worst-first
+- **Reusable UI components** — `SegmentedSelector<T>` and `TypeBadge` are generic and composable
+- **Lean dependency footprint** — only Compose, Navigation, DataStore, Lifecycle, and Material3
+- **Unit-tested logic** — `TypeChartTest`, `QuizLogicTest`, and `ScoreHistoryTest` cover core domain
+- **Offline-first** — no network requirements, works anywhere
 
 ---
 
-### Tier 3 — Infrastructure
+## 2. Known Limitations
 
-These add foundations needed before publishing or growing the team.
+| Issue | Location | Impact |
+|-------|----------|--------|
+| UI strings partially hardcoded | Most `ui/` files | Some labels still inline Kotlin strings; localization not yet complete |
+| No `contentDescription` on type badges | `TypeBadge.kt` | Screen readers cannot identify type names in quiz and study views |
+| No instrumented (UI) tests | — | Compose rendering and navigation flows are not covered by automation |
 
-#### 3.1 Unit tests
+---
 
-Add a `test/` source set (already scaffolded by the Android project template but unused). Priority test targets:
+## 3. Future Improvements
 
-| Test class | What to cover |
-|-----------|--------------|
-| `TypeChartTest` | `getEffectiveness()` for known matchups in all three generations; Gen 1 Ghost→Psychic = 0×; Steel resistances in Gen 2–5 vs. Gen 6+ |
-| `QuizLogicTest` | `generateQuestion()` never returns same type for both defenders in DOUBLE mode; `scoreColor()` and `performanceMessage()` boundary values |
-| `ScoreHistoryTest` | Cap at 10 scores; empty state; malformed comma-separated string handling |
+### Near-term
 
-#### 3.2 DataStore
+#### String resources
 
-Replace `SharedPreferences` in `ScoreHistory.kt` with `androidx.datastore:datastore-preferences`. DataStore is the current Android recommendation: it is async-safe (returns `Flow`), type-safe, and does not silently drop writes the way `apply()` can.
+Move remaining hardcoded UI strings to `res/values/strings.xml`. Labels like `"Master the type chart"`, `"Single Type Quiz"`, `"How effective is"`, and all performance messages (`"Perfect!"`, `"Great job!"`, etc.) should become string resources. This is required for full localization support.
 
-The `ScoreRepository` interface from 2.3 makes this swap transparent to the rest of the app.
+#### Accessibility
 
-#### 3.3 Enable release minification
-
-`app/build.gradle.kts:20` has `isMinifyEnabled = false`. Before any production release:
-
-```kotlin
-buildTypes {
-    release {
-        isMinifyEnabled = true
-        proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-    }
-}
-```
-
-Add a `proguard-rules.pro` keeping Compose-related reflection targets.
-
-#### 3.4 Raise Java target
-
-Update `app/build.gradle.kts:29–33` from `VERSION_1_8` to `VERSION_11`:
-
-```kotlin
-compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-kotlinOptions { jvmTarget = "11" }
-```
+Add `contentDescription` to all `TypeBadge` composables. Add a color-meaning legend to `StudyScreen` for users who cannot distinguish effectiveness colors.
 
 ---
 
 ### Tier 4 — Future Features
 
-These are ideas, not commitments. Each requires additional libraries.
+These are ideas, not commitments. Each requires additional libraries or significant new work.
 
 | Feature | Dependencies needed | Notes |
 |---------|-------------------|-------|
 | **PokéAPI integration** | Retrofit, OkHttp, Coroutines | Show Pokémon sprites on quiz questions; requires network permission |
-| **Statistics screen** | Room | Per-type accuracy over time; currently only total score per mode is stored |
-| **Light/dark mode toggle** | None | Add `LightColorScheme` to `Theme.kt`; store preference in DataStore |
-| **Accessibility** | None | Add `contentDescription` to all `TypeBadge` composables; add a color-meaning legend to `StudyScreen` |
-| **Difficulty settings** | None | Filter question pool by type tier (common vs. rare matchups) |
 
 ---
 
@@ -246,7 +142,10 @@ These are ideas, not commitments. Each requires additional libraries.
 For anyone new to the codebase:
 
 1. `data/TypeChart.kt` — start here; all domain models and the type chart logic
-2. `MainActivity.kt` — understand navigation and where top-level state lives
-3. `ui/HomeScreen.kt` — simplest screen; shows the `SegmentedSelector` reuse pattern
-4. `ui/StudyScreen.kt` — chart rendering; see how `getEffectiveness()` drives the grid
-5. `ui/QuizScreen.kt` — most complex; read the state variables first (lines 85–101), then the quiz branch, then the results branch
+2. `data/QuizLogic.kt` — question generation and scoring helpers
+3. `ui/navigation/Routes.kt` — understand the three serializable route types
+4. `MainActivity.kt` — NavHost wiring; see how routes map to screens
+5. `ui/HomeScreen.kt` — simplest screen; shows the `SegmentedSelector` reuse pattern
+6. `ui/StudyScreen.kt` — chart rendering; see how `getEffectiveness()` drives the grid
+7. `ui/quiz/QuizViewModel.kt` — state management; read `QuizState` first, then the event handlers
+8. `ui/quiz/QuizContent.kt` and `ui/quiz/ResultsScreen.kt` — UI consumers of `QuizState`

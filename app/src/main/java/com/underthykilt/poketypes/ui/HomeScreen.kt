@@ -15,75 +15,80 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.underthykilt.poketypes.data.Generation
+import com.underthykilt.poketypes.data.AppSettings
 import com.underthykilt.poketypes.ui.theme.QuizDualColor
 
 @Composable
 fun HomeScreen(
-    onStudy: (Generation) -> Unit,
-    onSingleQuiz: (Generation) -> Unit,
-    onDualQuiz: (Generation) -> Unit,
+    settings: AppSettings,
+    onStudy: () -> Unit,
+    onStats: () -> Unit,
+    onSettings: () -> Unit,
+    onSingleQuiz: () -> Unit,
+    onDualQuiz: () -> Unit,
 ) {
-    var generation by remember { mutableStateOf(Generation.GEN6_PLUS) }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            "PokeTypes",
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Master the type chart",
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-        )
-
-        Spacer(Modifier.height(40.dp))
-
-        Text(
-            "Game Generation",
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-        )
-        Spacer(Modifier.height(8.dp))
-        SegmentedSelector(
-            options = Generation.entries,
-            selected = generation,
-            onSelect = { generation = it },
-            label = { it.label },
-            sublabel = { it.description }
-        )
-
-        Spacer(Modifier.height(40.dp))
-
-        Button(
-            onClick = { onStudy(generation) },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+    Box(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
+        TextButton(
+            onClick = onStats,
+            modifier = Modifier.align(Alignment.TopStart)
         ) {
-            Text("Study Chart", fontSize = 18.sp)
+            Text("Stats", fontSize = 13.sp)
         }
-        Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = { onSingleQuiz(generation) },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        TextButton(
+            onClick = onSettings,
+            modifier = Modifier.align(Alignment.TopEnd)
         ) {
-            Text("Single Type Quiz", fontSize = 18.sp)
+            Text("Options", fontSize = 13.sp)
         }
-        Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = { onDualQuiz(generation) },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = QuizDualColor)
+
+        Column(
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Dual Type Quiz", fontSize = 18.sp)
+            Text(
+                "PokeTypes",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Master the type chart",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "${settings.generation.label}  ·  ${settings.difficulty.label}  ·  ${settings.quizLength.label}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
+            )
+
+            Spacer(Modifier.height(40.dp))
+
+            Button(
+                onClick = onStudy,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text("Study Chart", fontSize = 18.sp)
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onSingleQuiz,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Single Type Quiz", fontSize = 18.sp)
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onDualQuiz,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = QuizDualColor)
+            ) {
+                Text("Dual Type Quiz", fontSize = 18.sp)
+            }
         }
     }
 }

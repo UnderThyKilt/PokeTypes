@@ -19,8 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.underthykilt.poketypes.data.Difficulty
 import com.underthykilt.poketypes.data.Generation
-import com.underthykilt.poketypes.data.QUIZ_LENGTH
+import com.underthykilt.poketypes.data.QuizLength
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.ui.quiz.QuizContent
 import com.underthykilt.poketypes.ui.quiz.QuizViewModel
@@ -28,12 +29,22 @@ import com.underthykilt.poketypes.ui.quiz.ResultsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuizScreen(generation: Generation, quizMode: QuizMode, onBack: () -> Unit) {
+fun QuizScreen(
+    generation: Generation,
+    quizMode: QuizMode,
+    difficulty: Difficulty,
+    quizLength: QuizLength,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val viewModel: QuizViewModel = viewModel(
-        factory = QuizViewModel.factory(context.applicationContext as Application, generation, quizMode)
+        factory = QuizViewModel.factory(
+            context.applicationContext as Application,
+            generation, quizMode, difficulty, quizLength
+        )
     )
     val state by viewModel.state.collectAsState()
+    val isEndless = state.quizLength == null
 
     Scaffold(
         topBar = {
@@ -41,13 +52,17 @@ fun QuizScreen(generation: Generation, quizMode: QuizMode, onBack: () -> Unit) {
                 title = { Text("${generation.label} · ${quizMode.label}") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     if (!state.quizComplete) {
+                        val label = if (isEndless)
+                            "Q ${state.questionIndex + 1}"
+                        else
+                            "Q ${state.questionIndex + 1} / ${state.quizLength}"
                         Text(
-                            "Q ${state.questionIndex + 1} / $QUIZ_LENGTH",
+                            label,
                             modifier = Modifier.padding(end = 16.dp),
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
@@ -70,7 +85,8 @@ fun QuizScreen(generation: Generation, quizMode: QuizMode, onBack: () -> Unit) {
                 quizMode = quizMode,
                 paddingValues = padding,
                 onSelectAnswer = viewModel::selectAnswer,
-                onAdvance = viewModel::advance
+                onAdvance = viewModel::advance,
+                onEndQuiz = viewModel::endQuiz,
             )
         }
     }

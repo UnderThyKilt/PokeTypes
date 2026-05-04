@@ -36,7 +36,7 @@ fun StudyScreen(generation: Generation, onBack: () -> Unit) {
                 title = { Text("Type Chart · ${generation.label}") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )

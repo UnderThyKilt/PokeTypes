@@ -12,8 +12,8 @@ data class QuizQuestion(
     val correctAnswer: Float,
 )
 
-fun generateQuestion(gen: Generation, mode: QuizMode): QuizQuestion {
-    val types = availableTypes(gen)
+fun generateQuestion(gen: Generation, mode: QuizMode, difficulty: Difficulty = Difficulty.HARD): QuizQuestion {
+    val types = filteredTypes(gen, difficulty)
     val atk = types.random()
     val def = types.random()
     return when (mode) {
@@ -27,11 +27,15 @@ fun generateQuestion(gen: Generation, mode: QuizMode): QuizQuestion {
     }
 }
 
-fun performanceMessage(score: Int): String = when {
-    score == QUIZ_LENGTH -> "Perfect!"
-    score >= 9 -> "Outstanding!"
-    score >= 7 -> "Great job!"
-    score >= 5 -> "Keep it up!"
-    score >= 3 -> "Keep practicing!"
-    else -> "Study the chart!"
+fun performanceMessage(score: Int, total: Int): String {
+    if (total == 0) return "Study the chart!"
+    val pct = score * 100 / total
+    return when {
+        score == total -> "Perfect!"
+        pct >= 90     -> "Outstanding!"
+        pct >= 70     -> "Great job!"
+        pct >= 50     -> "Keep it up!"
+        pct >= 30     -> "Keep practicing!"
+        else          -> "Study the chart!"
+    }
 }

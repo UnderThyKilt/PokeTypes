@@ -7,11 +7,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.underthykilt.poketypes.data.DataStoreScoreRepository
+import com.underthykilt.poketypes.data.Difficulty
 import com.underthykilt.poketypes.data.Generation
+import com.underthykilt.poketypes.data.QuizLength
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.data.QuizQuestion
 import com.underthykilt.poketypes.data.QUIZ_LENGTH
+import com.underthykilt.poketypes.data.RoomTypeStatRepository
 import com.underthykilt.poketypes.data.ScoreRepository
+import com.underthykilt.poketypes.data.TypeStatDatabase
+import com.underthykilt.poketypes.data.TypeStatRepository
 import com.underthykilt.poketypes.data.generateQuestion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +26,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class QuizState(
+    val quizLength: Int? = 10,       // null = endless
     val questions: List<QuizQuestion> = emptyList(),
     val questionIndex: Int = 0,
     val selected: Float? = null,
@@ -36,18 +42,43 @@ class QuizViewModel(
     application: Application,
     val generation: Generation,
     val quizMode: QuizMode,
+    val difficulty: Difficulty,
+    val quizLengthSetting: QuizLength,
     private val repository: ScoreRepository,
+    private val statRepository: TypeStatRepository,
 ) : AndroidViewModel(application) {
+
+    private val quizLength: Int? = quizLengthSetting.count
+    private val seenKeys = mutableSetOf<Any>()
 
     private val _state = MutableStateFlow(newRound())
     val state: StateFlow<QuizState> = _state.asStateFlow()
 
     init {
-        refreshHistory()
+        if (quizLength != null) refreshHistory()
     }
 
-    private fun newRound(): QuizState =
-        QuizState(questions = List(QUIZ_LENGTH) { generateQuestion(generation, quizMode) })
+    private fun generateUniqueQuestion(): QuizQuestion {
+        repeat(40) {
+            val q = generateQuestion(generation, quizMode, difficulty)
+            if (seenKeys.add(questionKey(q))) return q
+        }
+        return generateQuestion(generation, quizMode, difficulty)
+    }
+
+    private fun newRound(): QuizState {
+        seenKeys.clear()
+        val count = quizLength ?: 1
+        val questions = buildList {
+            repeat(count * 20) {
+                if (size == count) return@repeat
+                val q = generateQuestion(generation, quizMode, difficulty)
+                if (seenKeys.add(questionKey(q))) add(q)
+            }
+            while (size < count) add(generateQuestion(generation, quizMode, difficulty))
+        }
+        return QuizState(quizLength = quizLength, questions = questions)
+    }
 
     private fun refreshHistory() {
         viewModelScope.launch {
@@ -69,18 +100,32 @@ class QuizViewModel(
         }
     }
 
-    fun advance() {
+    fun advance() = doAdvance(endQuiz = false)
+    fun endQuiz() = doAdvance(endQuiz = true)
+
+    private fun doAdvance(endQuiz: Boolean) {
         val s = _state.value
         val answer = s.selected ?: return
-        val wasCorrect = answer == s.questions[s.questionIndex].correctAnswer
+        val question = s.questions[s.questionIndex]
+        val wasCorrect = answer == question.correctAnswer
         val newResults = s.questionResults + wasCorrect
         val newAnswers = s.userAnswers + answer
-        val isLast = s.questionIndex == QUIZ_LENGTH - 1
+        val isLast = when {
+            endQuiz -> true
+            s.quizLength != null -> s.questionIndex == s.quizLength - 1
+            else -> false
+        }
 
-        if (isLast) {
-            viewModelScope.launch {
-                repository.saveScore(quizMode.name, s.correctAnswers)
-                val newHistory = repository.loadScores(quizMode.name).first()
+        viewModelScope.launch {
+            statRepository.record(question, wasCorrect, quizMode, generation)
+            if (isLast) {
+                if (s.quizLength != null) {
+                    repository.saveScore(quizMode.name, s.correctAnswers)
+                }
+                val newHistory = if (s.quizLength != null)
+                    repository.loadScores(quizMode.name).first()
+                else
+                    emptyList()
                 _state.update {
                     it.copy(
                         questionResults = newResults,
@@ -89,30 +134,55 @@ class QuizViewModel(
                         history = newHistory,
                     )
                 }
-            }
-        } else {
-            _state.update {
-                it.copy(
-                    questionResults = newResults,
-                    userAnswers = newAnswers,
-                    questionIndex = it.questionIndex + 1,
-                    selected = null,
-                )
+            } else {
+                val newQuestions = if (s.quizLength == null)
+                    s.questions + generateUniqueQuestion()
+                else
+                    s.questions
+                _state.update {
+                    it.copy(
+                        questions = newQuestions,
+                        questionResults = newResults,
+                        userAnswers = newAnswers,
+                        questionIndex = it.questionIndex + 1,
+                        selected = null,
+                    )
+                }
             }
         }
     }
 
     fun reset() {
         _state.value = newRound()
-        refreshHistory()
+        if (quizLength != null) refreshHistory()
     }
 
     companion object {
-        fun factory(application: Application, generation: Generation, quizMode: QuizMode): ViewModelProvider.Factory =
-            viewModelFactory {
-                initializer {
-                    QuizViewModel(application, generation, quizMode, DataStoreScoreRepository(application))
-                }
+        fun factory(
+            application: Application,
+            generation: Generation,
+            quizMode: QuizMode,
+            difficulty: Difficulty,
+            quizLength: QuizLength,
+        ): ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                QuizViewModel(
+                    application, generation, quizMode, difficulty, quizLength,
+                    DataStoreScoreRepository(application),
+                    RoomTypeStatRepository(TypeStatDatabase.get(application).typeStatDao()),
+                )
             }
+        }
+    }
+}
+
+private fun questionKey(q: QuizQuestion): Any {
+    val def2 = q.defendingType2
+    return if (def2 == null) {
+        Pair(q.attackingType, q.defendingType)
+    } else {
+        val lo = minOf(q.defendingType.ordinal, def2.ordinal)
+        val hi = maxOf(q.defendingType.ordinal, def2.ordinal)
+        Triple(q.attackingType, lo, hi)
     }
 }
