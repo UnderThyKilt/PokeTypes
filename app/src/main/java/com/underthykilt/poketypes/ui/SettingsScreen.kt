@@ -28,6 +28,7 @@ import com.underthykilt.poketypes.data.Difficulty
 import com.underthykilt.poketypes.data.Generation
 import com.underthykilt.poketypes.data.PresentationMode
 import com.underthykilt.poketypes.data.QuizLength
+import com.underthykilt.poketypes.data.SpriteGeneration
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
 
@@ -40,6 +41,7 @@ fun SettingsScreen(
     onSetDifficulty: (Difficulty) -> Unit,
     onSetQuizLength: (QuizLength) -> Unit,
     onSetPresentationMode: (PresentationMode) -> Unit,
+    onSetSpriteGeneration: (SpriteGeneration) -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -128,6 +130,18 @@ fun SettingsScreen(
                 label = { it.label },
                 sublabel = { if (it == PresentationMode.CLASSIC) "Type badges" else "Pokémon sprites" },
             )
+
+            if (settings.presentationMode == PresentationMode.POKEMON) {
+                Spacer(Modifier.height(20.dp))
+                SettingsLabel("Pokémon Generation", settings.spriteGeneration.label)
+                Spacer(Modifier.height(8.dp))
+                SegmentedSelector(
+                    options = SpriteGeneration.entries,
+                    selected = settings.spriteGeneration,
+                    onSelect = onSetSpriteGeneration,
+                    label = { it.label },
+                )
+            }
 
             Spacer(Modifier.height(24.dp))
         }

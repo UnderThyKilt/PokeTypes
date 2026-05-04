@@ -31,6 +31,7 @@ com.underthykilt.poketypes/
 │   ├── Difficulty.kt            # Difficulty enum (NORMAL/HARD) + filteredTypes()
 │   ├── QuizLength.kt            # QuizLength enum (FIVE/TEN/TWENTY/ENDLESS; count: Int?)
 │   ├── PresentationMode.kt      # PresentationMode enum (CLASSIC/POKEMON)
+│   ├── SpriteGeneration.kt      # SpriteGeneration enum (GEN1–GEN8/ALL); holds maxGen: Int
 │   ├── SettingsRepository.kt    # AppSettings data class + DataStore-backed repository
 │   ├── ScoreRepository.kt       # ScoreRepository interface + DataStoreScoreRepository
 │   ├── TypeStatEntity.kt        # Room entity: one row per answered question
@@ -38,11 +39,12 @@ com.underthykilt.poketypes/
 │   ├── TypeStatDatabase.kt      # RoomDatabase singleton
 │   ├── TypeStatRepository.kt    # TypeStatRepository interface + RoomTypeStatRepository
 │   └── pokemon/
-│       ├── PokemonEntry.kt      # data class(id, name) + spriteUrl computed property
-│       └── TypePokemon.kt       # Hardcoded ~7 Pokémon per type; randomPokemonForType()
+│       ├── PokemonEntry.kt      # data class(id, name, generation) + spriteUrl computed property
+│       └── TypePokemon.kt       # AUTO-GENERATED: 1025 Pokémon across 154 type combos;
+│                                #   randomPokemonForTypes(), hasPokemonForTypes()
 └── ui/
     ├── HomeScreen.kt            # Mode buttons, settings summary, SegmentedSelector<T>
-    ├── SettingsScreen.kt        # Options screen: theme, generation, difficulty, length, style
+    ├── SettingsScreen.kt        # Options screen: theme, generation, difficulty, length, style, sprite gen
     ├── StudyScreen.kt           # 18×18 scrollable type chart grid
     ├── QuizScreen.kt            # Scaffold + ViewModel wiring for quiz flow
     ├── components/
@@ -74,17 +76,18 @@ MainActivity
         ├── SettingsRoute → SettingsScreen  (reads/writes AppSettings via repository)
         ├── StatsRoute   → StatsScreen      (StatsViewModel ← Room TypeStatDatabase)
         ├── StudyRoute   → StudyScreen      (receives generationName)
-        └── QuizRoute    → QuizScreen       (receives gen, mode, difficulty, length, presentationMode)
+        └── QuizRoute    → QuizScreen       (gen, mode, difficulty, length, presentationMode, spriteGeneration)
                                 └── QuizViewModel (StateFlow<QuizState>)
                                       ├── ScoreRepository (DataStore) — fixed-length score history
                                       ├── TypeStatRepository (Room) — per-question recording
-                                      └── randomPokemonForType() — Pokémon enrichment (POKEMON mode only)
+                                      ├── hasPokemonForTypes() — filters questions with no sprite match
+                                      └── randomPokemonForTypes() — Pokémon enrichment (POKEMON mode only)
 ```
 
 State lives in two places:
 
 - **ViewModel** — `QuizState` (all quiz state) exposed as a single `StateFlow` from `QuizViewModel`
-- **Route arguments** — generation, quizMode, difficulty, quizLength, and presentationMode are typed navigation arguments; no mutable activity state
+- **Route arguments** — generation, quizMode, difficulty, quizLength, presentationMode, and spriteGeneration are typed navigation arguments; no mutable activity state
 
 ### `QuizState` Data Class
 
@@ -107,32 +110,54 @@ data class QuizState(
 
 ```kotlin
 data class AppSettings(
-    val isDarkTheme: Boolean            = true,
-    val generation: Generation          = Generation.GEN6_PLUS,
-    val difficulty: Difficulty          = Difficulty.HARD,
-    val quizLength: QuizLength          = QuizLength.TEN,
-    val presentationMode: PresentationMode = PresentationMode.CLASSIC,
+    val isDarkTheme: Boolean                = true,
+    val generation: Generation              = Generation.GEN6_PLUS,
+    val difficulty: Difficulty              = Difficulty.HARD,
+    val quizLength: QuizLength              = QuizLength.TEN,
+    val presentationMode: PresentationMode  = PresentationMode.CLASSIC,
+    val spriteGeneration: SpriteGeneration  = SpriteGeneration.ALL,
 )
 ```
 
-All five fields are persisted as individual string/boolean keys in a single DataStore file (`"settings"`). Each is read with `runCatching { Enum.valueOf(it) }` so stale stored values fail gracefully to the default.
+All six fields are persisted as individual string/boolean keys in a single DataStore file (`"settings"`). Each is read with `runCatching { Enum.valueOf(it) }` so stale stored values fail gracefully to the default.
 
 ### Pokémon Mode
 
-When `presentationMode == POKEMON`, each `QuizQuestion` is enriched with `PokemonEntry` values for the attacking and defending types:
+When `presentationMode == POKEMON`, each `QuizQuestion` is enriched with `PokemonEntry` values before being added to the quiz:
 
 ```kotlin
 data class QuizQuestion(
     ...
     val attackingPokemon: PokemonEntry? = null,
     val defendingPokemon: PokemonEntry? = null,
-    val defendingPokemon2: PokemonEntry? = null,
 )
 ```
 
-Enrichment happens in `QuizViewModel` via a private `QuizQuestion.withPokemon()` extension. `QuizContent` detects mode by checking `q.attackingPokemon != null` and renders either a `PokemonCard` (sprite via `AsyncImage` + name + small `TypeBadge`) or the classic large `TypeBadge`.
+Enrichment happens in `QuizViewModel` via a private `QuizQuestion.withPokemon()` extension, which calls `randomPokemonForTypes(vararg types, maxGeneration)`. The `maxGeneration` comes from `spriteGeneration.maxGen` so only Pokémon introduced by that generation are eligible.
+
+Before enrichment, `QuizQuestion.hasPokemon()` calls `hasPokemonForTypes()` — a deterministic (non-random) check — to confirm that at least one eligible Pokémon exists for both the attacker and defender types. Questions that fail this check are discarded during question generation; the loop tries again with a different random question. This prevents empty or mixed-mode displays when a narrow generation filter leaves some type combinations uncovered.
+
+`QuizContent` detects mode by checking `q.attackingPokemon != null` and renders either a `PokemonCard` (sprite via `SubcomposeAsyncImage` + Pokédex number + name + small `TypeBadge`) or the classic large `TypeBadge`. If a sprite fails to load, `SubcomposeAsyncImage` shows a circular placeholder with "?" rather than a blank space.
 
 Sprites are fetched from `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{id}.png`. Coil's `OkHttpNetworkFetcherFactory` handles the network; a `DiskCache` in `filesDir/pokemon_sprites` (50 MB cap) provides offline availability after first use.
+
+### `TypePokemon.kt` — Auto-Generated Data
+
+`TypePokemon.kt` is generated by `test/generate_pokemon_data.py` and should not be edited by hand. The script fetches all base-form Pokémon (IDs 1–1025, National Dex Gen 1–9) from PokéAPI using 19 API calls (one list endpoint + one per type), caches responses to `test/.pokeapi_cache/`, and writes the Kotlin source.
+
+Each `PokemonEntry(id, name, generation)` carries its generation number (1–9) so `randomPokemonForTypes` and `hasPokemonForTypes` can filter by generation at runtime without any additional lookups.
+
+To regenerate after a new Pokémon generation ships:
+
+```bash
+python test/generate_pokemon_data.py
+```
+
+To verify all sprite URLs are reachable:
+
+```bash
+python test/check_sprites.py
+```
 
 ### What Works Well
 
@@ -146,7 +171,7 @@ Sprites are fetched from `https://raw.githubusercontent.com/PokeAPI/sprites/mast
 - **Quiz length** — 5, 10, 20 questions or Endless; endless mode generates one question at a time and doesn't save score
 - **No-duplicate questions** — `seenKeys: MutableSet<Any>` with `questionKey()` normalizing dual-type order prevents repeats
 - **Per-type statistics** — every answered question recorded in Room; Stats screen shows attacking/defending accuracy per type, sorted worst-first
-- **Pokémon sprites** — optional presentation mode showing sprites cached offline in `filesDir`
+- **Pokémon sprites** — 1025 base-form Pokémon with generation-aware filtering; questions without a valid sprite are skipped automatically
 - **Reusable UI components** — `SegmentedSelector<T>` and `TypeBadge` are generic and composable
 - **Unit-tested logic** — `TypeChartTest`, `QuizLogicTest`, and `ScoreHistoryTest` cover core domain
 
@@ -159,7 +184,6 @@ Sprites are fetched from `https://raw.githubusercontent.com/PokeAPI/sprites/mast
 | UI strings partially hardcoded | Most `ui/` files | Some labels still inline Kotlin strings; localization not yet complete |
 | No `contentDescription` on type badges | `TypeBadge.kt` | Screen readers cannot identify type names in quiz and study views |
 | No instrumented (UI) tests | — | Compose rendering and navigation flows are not covered by automation |
-| Pokémon list is static | `TypePokemon.kt` | ~7 Pokémon per type; doesn't reflect Gen 1/2/5 regional availability |
 
 ---
 
@@ -175,10 +199,6 @@ Move remaining hardcoded UI strings to `res/values/strings.xml`. Labels like `"M
 
 Add `contentDescription` to all `TypeBadge` composables. Add a color-meaning legend to `StudyScreen` for users who cannot distinguish effectiveness colors.
 
-#### Generation-aware Pokémon pool
-
-Filter `TypePokemon.kt` by generation so only Pokémon introduced by that generation appear in POKEMON mode questions.
-
 ---
 
 ## 4. Recommended Reading Order
@@ -187,7 +207,7 @@ For anyone new to the codebase:
 
 1. `data/TypeChart.kt` — start here; all domain models and the type chart logic
 2. `data/QuizLogic.kt` — question generation and scoring helpers
-3. `data/SettingsRepository.kt` — see how all five settings are consolidated into one DataStore file
+3. `data/SettingsRepository.kt` — see how all six settings are consolidated into one DataStore file
 4. `ui/navigation/Routes.kt` — understand the five serializable route types
 5. `MainActivity.kt` — NavHost wiring; see how routes map to screens
 6. `ui/HomeScreen.kt` — simplest screen; shows the `SegmentedSelector` reuse pattern
@@ -195,3 +215,4 @@ For anyone new to the codebase:
 8. `ui/quiz/QuizViewModel.kt` — state management; read `QuizState` first, then the event handlers
 9. `ui/quiz/QuizContent.kt` — UI consumer of `QuizState`; see Classic vs Pokémon mode branching
 10. `PokeTypesApp.kt` — Coil singleton setup and disk cache configuration
+11. `test/generate_pokemon_data.py` — understand how `TypePokemon.kt` is generated from PokéAPI

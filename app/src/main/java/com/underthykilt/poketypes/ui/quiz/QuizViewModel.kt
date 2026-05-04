@@ -12,13 +12,15 @@ import com.underthykilt.poketypes.data.Generation
 import com.underthykilt.poketypes.data.PresentationMode
 import com.underthykilt.poketypes.data.QuizLength
 import com.underthykilt.poketypes.data.QuizMode
+import com.underthykilt.poketypes.data.SpriteGeneration
 import com.underthykilt.poketypes.data.QuizQuestion
 import com.underthykilt.poketypes.data.RoomTypeStatRepository
 import com.underthykilt.poketypes.data.ScoreRepository
 import com.underthykilt.poketypes.data.TypeStatDatabase
 import com.underthykilt.poketypes.data.TypeStatRepository
 import com.underthykilt.poketypes.data.generateQuestion
-import com.underthykilt.poketypes.data.pokemon.randomPokemonForType
+import com.underthykilt.poketypes.data.pokemon.hasPokemonForTypes
+import com.underthykilt.poketypes.data.pokemon.randomPokemonForTypes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +48,7 @@ class QuizViewModel(
     val difficulty: Difficulty,
     val quizLengthSetting: QuizLength,
     val presentationMode: PresentationMode,
+    val spriteGeneration: SpriteGeneration,
     private val repository: ScoreRepository,
     private val statRepository: TypeStatRepository,
 ) : AndroidViewModel(application) {
@@ -62,16 +65,31 @@ class QuizViewModel(
 
     private fun QuizQuestion.withPokemon(): QuizQuestion {
         if (presentationMode != PresentationMode.POKEMON) return this
+        val maxGen = spriteGeneration.maxGen
         return copy(
-            attackingPokemon = randomPokemonForType(attackingType),
-            defendingPokemon = randomPokemonForType(defendingType),
+            attackingPokemon = randomPokemonForTypes(attackingType, maxGeneration = maxGen),
+            defendingPokemon = if (defendingType2 != null)
+                randomPokemonForTypes(defendingType, defendingType2, maxGeneration = maxGen)
+            else
+                randomPokemonForTypes(defendingType, maxGeneration = maxGen),
         )
     }
 
+    private fun QuizQuestion.hasPokemon(): Boolean {
+        if (presentationMode != PresentationMode.POKEMON) return true
+        val maxGen = spriteGeneration.maxGen
+        val atkOk = hasPokemonForTypes(attackingType, maxGeneration = maxGen)
+        val defOk = if (defendingType2 != null)
+            hasPokemonForTypes(defendingType, defendingType2, maxGeneration = maxGen)
+        else
+            hasPokemonForTypes(defendingType, maxGeneration = maxGen)
+        return atkOk && defOk
+    }
+
     private fun generateUniqueQuestion(): QuizQuestion {
-        repeat(40) {
+        repeat(100) {
             val q = generateQuestion(generation, quizMode, difficulty)
-            if (seenKeys.add(questionKey(q))) return q.withPokemon()
+            if (seenKeys.add(questionKey(q)) && q.hasPokemon()) return q.withPokemon()
         }
         return generateQuestion(generation, quizMode, difficulty).withPokemon()
     }
@@ -80,10 +98,10 @@ class QuizViewModel(
         seenKeys.clear()
         val count = quizLength ?: 1
         val questions = buildList {
-            repeat(count * 20) {
+            repeat(count * 50) {
                 if (size == count) return@repeat
                 val q = generateQuestion(generation, quizMode, difficulty)
-                if (seenKeys.add(questionKey(q))) add(q.withPokemon())
+                if (seenKeys.add(questionKey(q)) && q.hasPokemon()) add(q.withPokemon())
             }
             while (size < count) add(generateQuestion(generation, quizMode, difficulty).withPokemon())
         }
@@ -175,10 +193,11 @@ class QuizViewModel(
             difficulty: Difficulty,
             quizLength: QuizLength,
             presentationMode: PresentationMode,
+            spriteGeneration: SpriteGeneration,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 QuizViewModel(
-                    application, generation, quizMode, difficulty, quizLength, presentationMode,
+                    application, generation, quizMode, difficulty, quizLength, presentationMode, spriteGeneration,
                     DataStoreScoreRepository(application),
                     RoomTypeStatRepository(TypeStatDatabase.get(application).typeStatDao()),
                 )

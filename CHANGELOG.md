@@ -3,6 +3,29 @@
 ## [Unreleased] - 2026-05-04
 
 ### Added
+- Expanded Pokémon sprite pool from 291 curated entries to all 1025 base-form Pokémon (Gen 1–9)
+- `SpriteGeneration` setting (Gen 1–8 or All) to filter which generation of Pokémon sprites appear in quiz
+- Questions with no matching Pokémon for the selected generation are automatically skipped
+- `hasPokemonForTypes()` deterministic lookup function for generation-aware question filtering
+- `generation` field on `PokemonEntry` (1–9) to support generation-aware filtering at runtime
+- `test/generate_pokemon_data.py` — fetches all Pokémon from PokéAPI and regenerates `TypePokemon.kt`
+- `test/check_sprites.py` — verifies all PokemonEntry sprite URLs return HTTP 200
+- Sprite error fallback: shows "?" placeholder instead of blank when a sprite fails to load
+- Pokédex number displayed next to Pokémon name in quiz cards (e.g. `#6 Charizard`)
+
+### Fixed
+- Blank sprite display when a specific Pokémon sprite fails to load (now shows placeholder)
+
+### Changed
+- `TypePokemon.kt` is now auto-generated; `randomPokemonForTypes` accepts `maxGeneration` parameter
+- `PokemonEntry` gains a `generation: Int` field
+- Sprite generation setting only appears in Options when Style is set to Pokémon
+
+---
+
+## [Unreleased] - 2026-05-04
+
+### Added
 - Added light/dark theme toggle, persisted in DataStore
 - Added Difficulty setting (Normal = 10 core types, Hard = all generation types)
 - Added Quiz Length setting (5, 10, 20, or Endless questions)

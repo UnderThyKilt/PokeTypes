@@ -24,6 +24,7 @@ import com.underthykilt.poketypes.data.Generation
 import com.underthykilt.poketypes.data.PresentationMode
 import com.underthykilt.poketypes.data.QuizLength
 import com.underthykilt.poketypes.data.QuizMode
+import com.underthykilt.poketypes.data.SpriteGeneration
 import com.underthykilt.poketypes.ui.quiz.QuizContent
 import com.underthykilt.poketypes.ui.quiz.QuizViewModel
 import com.underthykilt.poketypes.ui.quiz.ResultsScreen
@@ -36,13 +37,14 @@ fun QuizScreen(
     difficulty: Difficulty,
     quizLength: QuizLength,
     presentationMode: PresentationMode,
+    spriteGeneration: SpriteGeneration,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val viewModel: QuizViewModel = viewModel(
         factory = QuizViewModel.factory(
             context.applicationContext as Application,
-            generation, quizMode, difficulty, quizLength, presentationMode
+            generation, quizMode, difficulty, quizLength, presentationMode, spriteGeneration
         )
     )
     val state by viewModel.state.collectAsState()

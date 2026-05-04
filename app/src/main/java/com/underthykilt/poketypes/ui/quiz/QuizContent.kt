@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.underthykilt.poketypes.data.PokemonType
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.data.multiplierLabel
@@ -253,11 +256,28 @@ private fun PokemonCard(pokemon: PokemonEntry, type: PokemonType, type2: Pokemon
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        AsyncImage(
+        SubcomposeAsyncImage(
             model = pokemon.spriteUrl,
             contentDescription = pokemon.name,
             modifier = Modifier.size(52.dp),
-        )
+        ) {
+            val state = painter.state.collectAsState().value
+            if (state is AsyncImagePainter.State.Error) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("?", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                SubcomposeAsyncImageContent()
+            }
+        }
         Spacer(Modifier.width(6.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (type2 != null) {
@@ -275,7 +295,7 @@ private fun PokemonCard(pokemon: PokemonEntry, type: PokemonType, type2: Pokemon
                 TypeBadge(type, large = true)
             }
             Text(
-                pokemon.name,
+                "#${pokemon.id} ${pokemon.name}",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
             )

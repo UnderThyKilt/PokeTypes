@@ -15,4 +15,4 @@ object SettingsRoute
 data class StudyRoute(val generationName: String)
 
 @Serializable
-data class QuizRoute(val generationName: String, val quizModeName: String, val difficultyName: String, val quizLengthName: String, val presentationModeName: String)
+data class QuizRoute(val generationName: String, val quizModeName: String, val difficultyName: String, val quizLengthName: String, val presentationModeName: String, val spriteGenerationName: String)

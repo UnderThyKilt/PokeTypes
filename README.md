@@ -16,6 +16,7 @@ Persistent settings screen:
 - **Difficulty** — Normal (10 core types) / Hard (all types for the selected generation)
 - **Quiz Length** — 5, 10, 20, or Endless
 - **Style** — Classic (type badges) or Pokémon (sprites + name + badge)
+- **Pokémon Generation** — Gen 1 through Gen 8, or All (only shown when Style is Pokémon)
 
 ### Study Chart
 An 18×18 scrollable grid of type matchups. Tap any attacking type to highlight its row. Cells are color-coded:
@@ -34,7 +35,9 @@ Two modes:
 
 Questions are generated without duplicates within a session. Correct answers turn green, wrong answers turn red. A streak counter appears on consecutive correct answers.
 
-In **Classic** style, questions show colored type badges. In **Pokémon** style, questions show a Pokémon sprite, name, and small type badge instead. Sprites are downloaded on first use and cached persistently — no internet required after that.
+In **Classic** style, questions show colored type badges. In **Pokémon** style, questions show a Pokémon sprite, Pokédex number, name, and small type badge instead. Sprites are downloaded on first use and cached persistently — no internet required after that.
+
+When a **Pokémon Generation** is set, only Pokémon from that generation or earlier are shown as sprites, and questions where no matching Pokémon exists for the generation are automatically skipped.
 
 The results screen shows your score, a per-question dot summary (for fixed-length quizzes), a review of every missed question, and your last 10 scores for that mode.
 
@@ -67,6 +70,7 @@ app/src/main/java/com/underthykilt/poketypes/
 │   ├── Difficulty.kt        # Difficulty enum + filteredTypes()
 │   ├── QuizLength.kt        # QuizLength enum (FIVE / TEN / TWENTY / ENDLESS)
 │   ├── PresentationMode.kt  # PresentationMode enum (CLASSIC / POKEMON)
+│   ├── SpriteGeneration.kt  # SpriteGeneration enum (GEN1–GEN8, ALL) with maxGen: Int
 │   ├── SettingsRepository.kt # All user settings persisted in DataStore
 │   ├── ScoreRepository.kt   # ScoreRepository interface + DataStoreScoreRepository
 │   ├── TypeStatEntity.kt    # Room entity: one row per answered question
@@ -74,8 +78,8 @@ app/src/main/java/com/underthykilt/poketypes/
 │   ├── TypeStatDatabase.kt  # RoomDatabase singleton
 │   ├── TypeStatRepository.kt# TypeStatRepository interface + RoomTypeStatRepository
 │   └── pokemon/
-│       ├── PokemonEntry.kt  # PokemonEntry data class + spriteUrl property
-│       └── TypePokemon.kt   # ~7 Pokémon per type; randomPokemonForType()
+│       ├── PokemonEntry.kt  # PokemonEntry(id, name, generation) + spriteUrl property
+│       └── TypePokemon.kt   # Auto-generated: all 1025 Pokémon; randomPokemonForTypes() / hasPokemonForTypes()
 └── ui/
     ├── HomeScreen.kt        # Mode buttons, settings summary, SegmentedSelector<T>
     ├── SettingsScreen.kt    # Options screen
@@ -95,6 +99,10 @@ app/src/main/java/com/underthykilt/poketypes/
     └── theme/
         ├── Colors.kt
         └── Theme.kt         # Light + dark color schemes
+
+test/
+├── check_sprites.py         # Verify all PokemonEntry sprite URLs return HTTP 200
+└── generate_pokemon_data.py # Fetch all Pokémon from PokéAPI and regenerate TypePokemon.kt
 ```
 
 ### Key types
@@ -104,9 +112,10 @@ app/src/main/java/com/underthykilt/poketypes/
 - **`QuizMode`** — `SINGLE` or `DOUBLE`
 - **`QuizLength`** — `FIVE`, `TEN`, `TWENTY`, or `ENDLESS` (count is `null` for endless)
 - **`PresentationMode`** — `CLASSIC` or `POKEMON`
+- **`SpriteGeneration`** — `GEN1`–`GEN8` or `ALL`; filters Pokémon sprite pool by max generation
 - **`QuizQuestion`** — types, correct answer, and optional `PokemonEntry` fields for Pokémon mode
-- **`AppSettings`** — all five settings collected into one data class from `SettingsRepository`
-- **`PokemonEntry`** — `(id, name)` with a computed `spriteUrl` property
+- **`AppSettings`** — all six settings collected into one data class from `SettingsRepository`
+- **`PokemonEntry`** — `(id, name, generation)` with a computed `spriteUrl` property
 
 ### Key functions
 
@@ -114,7 +123,8 @@ app/src/main/java/com/underthykilt/poketypes/
 - `availableTypes(gen)` / `filteredTypes(gen, difficulty)` — type pool for a given gen + difficulty
 - `multiplierLabel(mult)` — float → `"½×"` or `"4×"` display string
 - `generateQuestion(gen, mode, difficulty)` — picks random types and computes multiplier
-- `randomPokemonForType(type)` — returns a random `PokemonEntry` for the given type
+- `randomPokemonForTypes(vararg types, maxGeneration)` — random `PokemonEntry` for exact type combo within gen cap
+- `hasPokemonForTypes(vararg types, maxGeneration)` — deterministic existence check used to filter invalid questions
 - `SegmentedSelector<T>()` — generic segmented control used throughout settings and home
 
 ---
@@ -137,10 +147,24 @@ app/src/main/java/com/underthykilt/poketypes/
 
 ## Build
 
-```bash
-./gradlew assembleDebug
-```
+Open in Android Studio and run, or build via Gradle.
 
 Sprite images are fetched from the PokéAPI GitHub sprites repository on first launch and cached to `filesDir/pokemon_sprites` (50 MB cap). Subsequent runs work fully offline.
 
-All type chart data and Pokémon mappings are hardcoded in the app.
+### Regenerating Pokémon data
+
+`TypePokemon.kt` is auto-generated from PokéAPI. To refresh it (e.g. after a new generation is released):
+
+```bash
+python test/generate_pokemon_data.py
+```
+
+API responses are cached to `test/.pokeapi_cache/` so re-runs are instant without network access.
+
+### Verifying sprite URLs
+
+```bash
+python test/check_sprites.py
+```
+
+Checks every `PokemonEntry` in `TypePokemon.kt` with a HEAD request and reports any that return non-200.
