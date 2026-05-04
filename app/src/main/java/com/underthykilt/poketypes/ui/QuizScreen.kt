@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -437,7 +439,21 @@ fun QuizScreen(generation: Generation, quizMode: QuizMode, onBack: () -> Unit) {
                         colors = ButtonDefaults.buttonColors(containerColor = containerColor),
                         enabled = !answered || isCorrect || isSelected
                     ) {
-                        Text(multiplierLabel(choice), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                multiplierLabel(choice),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                style = TextStyle(drawStyle = Stroke(width = 6f)),
+                                color = Color(0xFF1A1A2E)
+                            )
+                            Text(
+                                multiplierLabel(choice),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
 
