@@ -8,7 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +22,7 @@ import com.underthykilt.poketypes.data.Generation
 import com.underthykilt.poketypes.data.PokemonType
 import com.underthykilt.poketypes.data.availableTypes
 import com.underthykilt.poketypes.data.getEffectiveness
+import com.underthykilt.poketypes.ui.theme.effectivenessColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -161,13 +162,6 @@ fun StudyScreen(generation: Generation, onBack: () -> Unit) {
             }
         }
     }
-}
-
-private fun effectivenessColor(mult: Float): Color = when (mult) {
-    0f -> Color(0xFF222222)
-    0.5f -> Color(0xFF8B1A1A)
-    2f -> Color(0xFF1A6B1A)
-    else -> Color(0xFF2A2A3A)
 }
 
 private fun multiplierText(mult: Float): String = when (mult) {

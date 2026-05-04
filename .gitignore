@@ -9,5 +9,5 @@ local.properties
 .idea/
 *.iml
 
-# Misc
-test
+# Stray root-level test file
+/test

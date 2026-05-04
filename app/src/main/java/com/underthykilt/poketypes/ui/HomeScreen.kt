@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,35 +16,46 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.underthykilt.poketypes.data.Generation
+import com.underthykilt.poketypes.ui.theme.QuizDualColor
 
 @Composable
 fun HomeScreen(
-    generation: Generation,
-    onGenerationChange: (Generation) -> Unit,
-    onStudy: () -> Unit,
-    onSingleQuiz: () -> Unit,
-    onDualQuiz: () -> Unit,
+    onStudy: (Generation) -> Unit,
+    onSingleQuiz: (Generation) -> Unit,
+    onDualQuiz: (Generation) -> Unit,
 ) {
+    var generation by remember { mutableStateOf(Generation.GEN6_PLUS) }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("PokeTypes", fontSize = 40.sp, fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary)
+        Text(
+            "PokeTypes",
+            fontSize = 40.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
         Spacer(Modifier.height(8.dp))
-        Text("Master the type chart", fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
+        Text(
+            "Master the type chart",
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+        )
 
         Spacer(Modifier.height(40.dp))
 
-        Text("Game Generation", fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+        Text(
+            "Game Generation",
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
         Spacer(Modifier.height(8.dp))
         SegmentedSelector(
-            options = Generation.values().toList(),
+            options = Generation.entries,
             selected = generation,
-            onSelect = onGenerationChange,
+            onSelect = { generation = it },
             label = { it.label },
             sublabel = { it.description }
         )
@@ -52,7 +63,7 @@ fun HomeScreen(
         Spacer(Modifier.height(40.dp))
 
         Button(
-            onClick = onStudy,
+            onClick = { onStudy(generation) },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
@@ -60,7 +71,7 @@ fun HomeScreen(
         }
         Spacer(Modifier.height(12.dp))
         Button(
-            onClick = onSingleQuiz,
+            onClick = { onSingleQuiz(generation) },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
@@ -68,9 +79,9 @@ fun HomeScreen(
         }
         Spacer(Modifier.height(12.dp))
         Button(
-            onClick = onDualQuiz,
+            onClick = { onDualQuiz(generation) },
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7038F8))
+            colors = ButtonDefaults.buttonColors(containerColor = QuizDualColor)
         ) {
             Text("Dual Type Quiz", fontSize = 18.sp)
         }

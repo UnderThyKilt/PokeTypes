@@ -1,4 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PokeTypes</string>
+    <string name="tagline">Master the type chart</string>
+    <string name="game_generation">Game Generation</string>
+    <string name="study_chart">Study Chart</string>
+    <string name="single_type_quiz">Single Type Quiz</string>
+    <string name="dual_type_quiz">Dual Type Quiz</string>
+    <string name="study_hint">Tap an attacking type to highlight its row:</string>
+    <string name="how_effective_is">How effective is</string>
+    <string name="attacking">attacking</string>
+    <string name="next_question">Next Question</string>
+    <string name="finish_quiz">Finish Quiz</string>
+    <string name="play_again">Play Again</string>
+    <string name="back_to_home">Back to Home</string>
+    <string name="quiz_complete">Quiz Complete!</string>
+    <string name="this_quiz">This Quiz</string>
+    <string name="wrong_answers">Wrong Answers (%d)</string>
+    <string name="perfect_no_wrong">Perfect — no wrong answers!</string>
+    <string name="recent_scores">Recent Scores</string>
+    <string name="no_previous_scores">No previous scores</string>
+    <string name="your_answer">Your answer</string>
+    <string name="correct">Correct</string>
+    <string name="perf_perfect">Perfect!</string>
+    <string name="perf_outstanding">Outstanding!</string>
+    <string name="perf_great_job">Great job!</string>
+    <string name="perf_keep_it_up">Keep it up!</string>
+    <string name="perf_keep_practicing">Keep practicing!</string>
+    <string name="perf_study_the_chart">Study the chart!</string>
 </resources>
