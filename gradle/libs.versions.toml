@@ -10,6 +10,7 @@ navigationCompose = "2.8.4"
 datastorePreferences = "1.1.1"
 kotlinxSerializationJson = "1.7.3"
 room = "2.7.1"
+coil3 = "3.1.0"
 junit = "4.13.2"
 
 [libraries]
@@ -29,6 +30,8 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
+coil3-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil3" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

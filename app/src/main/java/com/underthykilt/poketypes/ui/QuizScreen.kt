@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.underthykilt.poketypes.data.Difficulty
 import com.underthykilt.poketypes.data.Generation
+import com.underthykilt.poketypes.data.PresentationMode
 import com.underthykilt.poketypes.data.QuizLength
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.ui.quiz.QuizContent
@@ -34,13 +35,14 @@ fun QuizScreen(
     quizMode: QuizMode,
     difficulty: Difficulty,
     quizLength: QuizLength,
+    presentationMode: PresentationMode,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val viewModel: QuizViewModel = viewModel(
         factory = QuizViewModel.factory(
             context.applicationContext as Application,
-            generation, quizMode, difficulty, quizLength
+            generation, quizMode, difficulty, quizLength, presentationMode
         )
     )
     val state by viewModel.state.collectAsState()

@@ -33,8 +33,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.underthykilt.poketypes.data.PokemonType
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.data.multiplierLabel
+import com.underthykilt.poketypes.data.pokemon.PokemonEntry
 import com.underthykilt.poketypes.ui.components.TypeBadge
 import com.underthykilt.poketypes.ui.theme.CorrectGreen
 import com.underthykilt.poketypes.ui.theme.WrongRed
@@ -57,6 +60,7 @@ fun QuizContent(
     val answeredCorrectly = state.selected == q.correctAnswer
     val isEndless = state.quizLength == null
     val isLastQuestion = !isEndless && state.questionIndex == (state.quizLength ?: 0) - 1
+    val pokemonMode = q.attackingPokemon != null
 
     Column(
         modifier = Modifier
@@ -96,7 +100,11 @@ fun QuizContent(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 Spacer(Modifier.height(12.dp))
-                TypeBadge(q.attackingType, large = true)
+                if (pokemonMode && q.attackingPokemon != null) {
+                    PokemonCard(q.attackingPokemon, q.attackingType)
+                } else {
+                    TypeBadge(q.attackingType, large = true)
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "attacking",
@@ -110,17 +118,29 @@ fun QuizContent(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TypeBadge(q.defendingType, large = true)
+                        if (pokemonMode && q.defendingPokemon != null) {
+                            PokemonCard(q.defendingPokemon, q.defendingType)
+                        } else {
+                            TypeBadge(q.defendingType, large = true)
+                        }
                         Text(
                             " / ",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
-                        TypeBadge(def2, large = true)
+                        if (pokemonMode && q.defendingPokemon2 != null) {
+                            PokemonCard(q.defendingPokemon2, def2)
+                        } else {
+                            TypeBadge(def2, large = true)
+                        }
                     }
                 } else {
-                    TypeBadge(q.defendingType, large = true)
+                    if (pokemonMode && q.defendingPokemon != null) {
+                        PokemonCard(q.defendingPokemon, q.defendingType)
+                    } else {
+                        TypeBadge(q.defendingType, large = true)
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("?", fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -227,5 +247,24 @@ fun QuizContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PokemonCard(pokemon: PokemonEntry, type: PokemonType) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        AsyncImage(
+            model = pokemon.spriteUrl,
+            contentDescription = pokemon.name,
+            modifier = Modifier.size(80.dp),
+        )
+        Text(
+            pokemon.name,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(4.dp))
+        TypeBadge(type)
     }
 }

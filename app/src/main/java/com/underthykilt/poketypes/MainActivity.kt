@@ -17,6 +17,7 @@ import androidx.navigation.toRoute
 import com.underthykilt.poketypes.data.AppSettings
 import com.underthykilt.poketypes.data.Difficulty
 import com.underthykilt.poketypes.data.Generation
+import com.underthykilt.poketypes.data.PresentationMode
 import com.underthykilt.poketypes.data.QuizLength
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.data.SettingsRepository
@@ -58,12 +59,24 @@ class MainActivity : ComponentActivity() {
                                 onSettings = { navController.navigate(SettingsRoute) },
                                 onSingleQuiz = {
                                     navController.navigate(
-                                        QuizRoute(settings.generation.name, QuizMode.SINGLE.name, settings.difficulty.name, settings.quizLength.name)
+                                        QuizRoute(
+                                            settings.generation.name,
+                                            QuizMode.SINGLE.name,
+                                            settings.difficulty.name,
+                                            settings.quizLength.name,
+                                            settings.presentationMode.name,
+                                        )
                                     )
                                 },
                                 onDualQuiz = {
                                     navController.navigate(
-                                        QuizRoute(settings.generation.name, QuizMode.DOUBLE.name, settings.difficulty.name, settings.quizLength.name)
+                                        QuizRoute(
+                                            settings.generation.name,
+                                            QuizMode.DOUBLE.name,
+                                            settings.difficulty.name,
+                                            settings.quizLength.name,
+                                            settings.presentationMode.name,
+                                        )
                                     )
                                 }
                             )
@@ -71,10 +84,11 @@ class MainActivity : ComponentActivity() {
                         composable<SettingsRoute> {
                             SettingsScreen(
                                 settings = settings,
-                                onSetDarkTheme  = { scope.launch { settingsRepository.setDarkTheme(it)  } },
-                                onSetGeneration = { scope.launch { settingsRepository.setGeneration(it) } },
-                                onSetDifficulty = { scope.launch { settingsRepository.setDifficulty(it) } },
-                                onSetQuizLength = { scope.launch { settingsRepository.setQuizLength(it) } },
+                                onSetDarkTheme       = { scope.launch { settingsRepository.setDarkTheme(it)         } },
+                                onSetGeneration      = { scope.launch { settingsRepository.setGeneration(it)        } },
+                                onSetDifficulty      = { scope.launch { settingsRepository.setDifficulty(it)        } },
+                                onSetQuizLength      = { scope.launch { settingsRepository.setQuizLength(it)        } },
+                                onSetPresentationMode = { scope.launch { settingsRepository.setPresentationMode(it) } },
                                 onBack = { navController.popBackStack() }
                             )
                         }
@@ -91,10 +105,11 @@ class MainActivity : ComponentActivity() {
                         composable<QuizRoute> { backStackEntry ->
                             val route = backStackEntry.toRoute<QuizRoute>()
                             QuizScreen(
-                                generation = Generation.valueOf(route.generationName),
-                                quizMode   = QuizMode.valueOf(route.quizModeName),
-                                difficulty = Difficulty.valueOf(route.difficultyName),
-                                quizLength = QuizLength.valueOf(route.quizLengthName),
+                                generation       = Generation.valueOf(route.generationName),
+                                quizMode         = QuizMode.valueOf(route.quizModeName),
+                                difficulty       = Difficulty.valueOf(route.difficultyName),
+                                quizLength       = QuizLength.valueOf(route.quizLengthName),
+                                presentationMode = PresentationMode.valueOf(route.presentationModeName),
                                 onBack = { navController.popBackStack() }
                             )
                         }

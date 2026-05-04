@@ -9,15 +9,16 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.underthykilt.poketypes.data.DataStoreScoreRepository
 import com.underthykilt.poketypes.data.Difficulty
 import com.underthykilt.poketypes.data.Generation
+import com.underthykilt.poketypes.data.PresentationMode
 import com.underthykilt.poketypes.data.QuizLength
 import com.underthykilt.poketypes.data.QuizMode
 import com.underthykilt.poketypes.data.QuizQuestion
-import com.underthykilt.poketypes.data.QUIZ_LENGTH
 import com.underthykilt.poketypes.data.RoomTypeStatRepository
 import com.underthykilt.poketypes.data.ScoreRepository
 import com.underthykilt.poketypes.data.TypeStatDatabase
 import com.underthykilt.poketypes.data.TypeStatRepository
 import com.underthykilt.poketypes.data.generateQuestion
+import com.underthykilt.poketypes.data.pokemon.randomPokemonForType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +45,7 @@ class QuizViewModel(
     val quizMode: QuizMode,
     val difficulty: Difficulty,
     val quizLengthSetting: QuizLength,
+    val presentationMode: PresentationMode,
     private val repository: ScoreRepository,
     private val statRepository: TypeStatRepository,
 ) : AndroidViewModel(application) {
@@ -58,12 +60,21 @@ class QuizViewModel(
         if (quizLength != null) refreshHistory()
     }
 
+    private fun QuizQuestion.withPokemon(): QuizQuestion {
+        if (presentationMode != PresentationMode.POKEMON) return this
+        return copy(
+            attackingPokemon  = randomPokemonForType(attackingType),
+            defendingPokemon  = randomPokemonForType(defendingType),
+            defendingPokemon2 = defendingType2?.let { randomPokemonForType(it) },
+        )
+    }
+
     private fun generateUniqueQuestion(): QuizQuestion {
         repeat(40) {
             val q = generateQuestion(generation, quizMode, difficulty)
-            if (seenKeys.add(questionKey(q))) return q
+            if (seenKeys.add(questionKey(q))) return q.withPokemon()
         }
-        return generateQuestion(generation, quizMode, difficulty)
+        return generateQuestion(generation, quizMode, difficulty).withPokemon()
     }
 
     private fun newRound(): QuizState {
@@ -73,9 +84,9 @@ class QuizViewModel(
             repeat(count * 20) {
                 if (size == count) return@repeat
                 val q = generateQuestion(generation, quizMode, difficulty)
-                if (seenKeys.add(questionKey(q))) add(q)
+                if (seenKeys.add(questionKey(q))) add(q.withPokemon())
             }
-            while (size < count) add(generateQuestion(generation, quizMode, difficulty))
+            while (size < count) add(generateQuestion(generation, quizMode, difficulty).withPokemon())
         }
         return QuizState(quizLength = quizLength, questions = questions)
     }
@@ -164,10 +175,11 @@ class QuizViewModel(
             quizMode: QuizMode,
             difficulty: Difficulty,
             quizLength: QuizLength,
+            presentationMode: PresentationMode,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 QuizViewModel(
-                    application, generation, quizMode, difficulty, quizLength,
+                    application, generation, quizMode, difficulty, quizLength, presentationMode,
                     DataStoreScoreRepository(application),
                     RoomTypeStatRepository(TypeStatDatabase.get(application).typeStatDao()),
                 )

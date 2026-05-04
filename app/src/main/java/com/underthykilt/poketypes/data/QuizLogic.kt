@@ -1,5 +1,7 @@
 package com.underthykilt.poketypes.data
 
+import com.underthykilt.poketypes.data.pokemon.PokemonEntry
+
 enum class QuizMode(val label: String, val description: String) {
     SINGLE("Single Type", "One defending type"),
     DOUBLE("Dual Type", "Two defending types")
@@ -10,6 +12,9 @@ data class QuizQuestion(
     val defendingType: PokemonType,
     val defendingType2: PokemonType? = null,
     val correctAnswer: Float,
+    val attackingPokemon: PokemonEntry? = null,
+    val defendingPokemon: PokemonEntry? = null,
+    val defendingPokemon2: PokemonEntry? = null,
 )
 
 fun generateQuestion(gen: Generation, mode: QuizMode, difficulty: Difficulty = Difficulty.HARD): QuizQuestion {

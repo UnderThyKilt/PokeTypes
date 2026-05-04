@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.coil3.compose)
+    implementation(libs.coil3.network.okhttp)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit)
 }

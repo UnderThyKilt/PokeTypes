@@ -3,6 +3,30 @@
 ## [Unreleased] - 2026-05-04
 
 ### Added
+- Added light/dark theme toggle, persisted in DataStore
+- Added Difficulty setting (Normal = 10 core types, Hard = all generation types)
+- Added Quiz Length setting (5, 10, 20, or Endless questions)
+- Added Endless quiz mode: questions generated one at a time, score not saved to history
+- Added Options screen consolidating all settings (theme, generation, difficulty, length, style)
+- Added Stats screen with per-type attacking/defending accuracy bars backed by Room
+- Added no-duplicate question generation within a quiz session
+- Added Pokémon mode: quiz questions show a Pokémon sprite, name, and type badge instead of a plain badge
+- Added `PresentationMode` setting (Classic / Pokémon), selectable from the Options screen
+- Added Coil 3.1.x image loader with OkHttp network fetcher and persistent 50 MB disk cache in `filesDir`
+- Added `PokeTypesApp` Application subclass to configure the singleton Coil image loader
+- Added hardcoded Pokémon roster (~7 per type, all 18 types) in `data/pokemon/TypePokemon.kt`
+
+### Changed
+- Consolidated all settings into a single `SettingsRepository` / `AppSettings` data class
+- `QuizRoute` now carries difficulty, quiz length, and presentation mode as typed route arguments
+- `ResultsScreen` score display and history section adapt to fixed vs. endless quiz length
+- Updated `README.md` and `docs/ARCHITECTURE.md` to reflect current feature set and tech stack
+
+---
+
+## [Unreleased] - 2026-05-04
+
+### Added
 - Introduced `QuizViewModel` with `StateFlow`-based UI state management
 - Added type-safe navigation with a dedicated `Routes` sealed class
 - Added `QuizContent` composable and `ResultsScreen` for a cleaner quiz flow
