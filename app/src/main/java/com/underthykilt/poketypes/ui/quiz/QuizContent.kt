@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -252,19 +253,23 @@ fun QuizContent(
 
 @Composable
 private fun PokemonCard(pokemon: PokemonEntry, type: PokemonType) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
         AsyncImage(
             model = pokemon.spriteUrl,
             contentDescription = pokemon.name,
-            modifier = Modifier.size(80.dp),
+            modifier = Modifier.size(52.dp),
         )
-        Text(
-            pokemon.name,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.height(4.dp))
-        TypeBadge(type)
+        Spacer(Modifier.width(6.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TypeBadge(type, large = true)
+            Text(
+                pokemon.name,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            )
+        }
     }
 }
