@@ -137,6 +137,7 @@ test/
 | UI | Jetpack Compose (BOM 2024.10.01) |
 | Material Design | Material3 |
 | Navigation | Navigation Compose 2.8.4 (type-safe) |
+| Serialization | kotlinx.serialization 1.7.3 |
 | Persistence | DataStore Preferences 1.1.1 |
 | Database | Room 2.7.1 (KSP 2.3.2) |
 | Image loading | Coil 3.1.0 (OkHttp network fetcher) |

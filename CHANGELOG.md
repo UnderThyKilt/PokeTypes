@@ -2,6 +2,17 @@
 
 ## [Unreleased] - 2026-05-04
 
+### Removed
+- Deleted `ScoreHistory.kt` — dead code superseded by `DataStoreScoreRepository`
+- Deleted `ThemeRepository.kt` — dead code superseded by `SettingsRepository`
+
+### Changed
+- Added `kotlinx.serialization 1.7.3` to README.md Tech Stack table to match ARCHITECTURE.md
+
+---
+
+## [Unreleased] - 2026-05-04
+
 ### Added
 - Expanded Pokémon sprite pool from 291 curated entries to all 1025 base-form Pokémon (Gen 1–9)
 - `SpriteGeneration` setting (Gen 1–8 or All) to filter which generation of Pokémon sprites appear in quiz
