@@ -183,6 +183,12 @@ Reads every entry in `pokemon.json` and checks its sprite URL with a HEAD reques
 
 ---
 
+## Roadmap
+
+Planned features are tracked in [`docs/FUTURE_FEATURES.md`](docs/FUTURE_FEATURES.md). Top items: simplified Pokédex browser, expanded theme options (AMOLED, type-accent, high contrast), type matchup calculator, and results sharing.
+
+---
+
 ## Testing
 
 Unit tests live in `app/src/test/` and run on the JVM (no device needed).

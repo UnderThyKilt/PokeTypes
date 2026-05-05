@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased] - 2026-05-05 (docs)
+
+### Added
+- `docs/FUTURE_FEATURES.md` — prioritized backlog of 10 planned features (Pokédex, theme options, type calculator, results sharing, daily challenge, weakness lookup, haptics, ViewModel tests, accessibility, string resources)
+- Roadmap section in `README.md` linking to `docs/FUTURE_FEATURES.md`
+
+---
+
 ## [Unreleased] - 2026-05-05
 
 ### Added
