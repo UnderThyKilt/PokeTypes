@@ -33,6 +33,30 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
+afterEvaluate {
+    val baseTask = tasks.named<Test>("testDebugUnitTest").get()
+
+    mapOf(
+        "testQuizLogic" to "com.underthykilt.poketypes.QuizLogicTest",
+        "testEnrichWithPokemonUseCase" to "com.underthykilt.poketypes.domain.EnrichWithPokemonUseCaseTest",
+        "testGenerateQuizQuestionsUseCase" to "com.underthykilt.poketypes.domain.GenerateQuizQuestionsUseCaseTest",
+    ).forEach { (taskName, className) ->
+        tasks.register<Test>(taskName) {
+            group = "verification"
+            description = "Runs $className"
+            classpath = baseTask.classpath
+            testClassesDirs = baseTask.testClassesDirs
+            dependsOn(baseTask.taskDependencies)
+            filter { includeTestsMatching(className) }
+        }
+    }
 }
 
 dependencies {
@@ -54,5 +78,19 @@ dependencies {
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.okhttp)
     debugImplementation(libs.androidx.ui.tooling)
+    // unit tests (JVM)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.room.testing)
+
+    // instrumented tests (device / emulator)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

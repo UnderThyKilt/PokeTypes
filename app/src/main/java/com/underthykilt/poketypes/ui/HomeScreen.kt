@@ -26,6 +26,8 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onSingleQuiz: () -> Unit,
     onDualQuiz: () -> Unit,
+    onReverseSingleQuiz: () -> Unit,
+    onReverseDualQuiz: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
         TextButton(
@@ -64,7 +66,7 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
             )
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(32.dp))
 
             Button(
                 onClick = onStudy,
@@ -88,6 +90,43 @@ fun HomeScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = QuizDualColor)
             ) {
                 Text("Dual Type Quiz", fontSize = 18.sp)
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f))
+                Text(
+                    "  Reverse  ",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f))
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onReverseSingleQuiz,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Single Type Quiz", fontSize = 16.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onReverseDualQuiz,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = QuizDualColor
+                )
+            ) {
+                Text("Dual Type Quiz", fontSize = 16.sp)
             }
         }
     }

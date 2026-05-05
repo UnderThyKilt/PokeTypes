@@ -131,6 +131,7 @@ fun ResultsScreen(
             wrongIndices.forEach { i ->
                 val wq = state.questions[i]
                 val wDef2 = wq.defendingType2
+                val isReverse = wq.answerChoices.isNotEmpty()
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -143,50 +144,95 @@ fun ResultsScreen(
                         ) {
                             TypeBadge(wq.attackingType)
                             Text(
-                                "  →  ",
+                                if (isReverse) "  at ${multiplierLabel(wq.promptMultiplier ?: 1f)}  →  ?"
+                                else "  →  ",
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
-                            TypeBadge(wq.defendingType)
-                            if (wDef2 != null) {
-                                Text(
-                                    " / ",
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                                TypeBadge(wDef2)
+                            if (!isReverse) {
+                                TypeBadge(wq.defendingType)
+                                if (wDef2 != null) {
+                                    Text(
+                                        " / ",
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                    TypeBadge(wDef2)
+                                }
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    "Your answer",
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                                Text(
-                                    multiplierLabel(state.userAnswers[i]),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = WrongRed
-                                )
+                        if (isReverse) {
+                            val userPair = wq.answerChoices.getOrNull(state.userAnswers[i].toInt())
+                            val correctPair = wq.answerChoices.getOrNull(wq.correctAnswer.toInt())
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "Your answer",
+                                        fontSize = 10.sp,
+                                        color = WrongRed
+                                    )
+                                    if (userPair != null) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            TypeBadge(userPair.first)
+                                            if (userPair.second != null) {
+                                                Text(" / ", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                                TypeBadge(userPair.second!!)
+                                            }
+                                        }
+                                    }
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "Correct",
+                                        fontSize = 10.sp,
+                                        color = CorrectGreen
+                                    )
+                                    if (correctPair != null) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            TypeBadge(correctPair.first)
+                                            if (correctPair.second != null) {
+                                                Text(" / ", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                                TypeBadge(correctPair.second!!)
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    "Correct",
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                                Text(
-                                    multiplierLabel(wq.correctAnswer),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CorrectGreen
-                                )
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "Your answer",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        multiplierLabel(state.userAnswers[i]),
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = WrongRed
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "Correct",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        multiplierLabel(wq.correctAnswer),
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CorrectGreen
+                                    )
+                                }
                             }
                         }
                     }

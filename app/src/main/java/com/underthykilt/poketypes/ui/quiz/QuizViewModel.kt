@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.underthykilt.poketypes.PokeTypesApp
 import com.underthykilt.poketypes.data.DataStoreScoreRepository
 import com.underthykilt.poketypes.data.Difficulty
 import com.underthykilt.poketypes.data.Generation
@@ -18,9 +19,8 @@ import com.underthykilt.poketypes.data.RoomTypeStatRepository
 import com.underthykilt.poketypes.data.ScoreRepository
 import com.underthykilt.poketypes.data.TypeStatDatabase
 import com.underthykilt.poketypes.data.TypeStatRepository
-import com.underthykilt.poketypes.data.generateQuestion
-import com.underthykilt.poketypes.data.pokemon.hasPokemonForTypes
-import com.underthykilt.poketypes.data.pokemon.randomPokemonForTypes
+import com.underthykilt.poketypes.domain.EnrichWithPokemonUseCase
+import com.underthykilt.poketypes.domain.GenerateQuizQuestionsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,6 +51,7 @@ class QuizViewModel(
     val spriteGeneration: SpriteGeneration,
     private val repository: ScoreRepository,
     private val statRepository: TypeStatRepository,
+    private val generateQuestions: GenerateQuizQuestionsUseCase,
 ) : AndroidViewModel(application) {
 
     private val quizLength: Int? = quizLengthSetting.count
@@ -63,48 +64,12 @@ class QuizViewModel(
         if (quizLength != null) refreshHistory()
     }
 
-    private fun QuizQuestion.withPokemon(): QuizQuestion {
-        if (presentationMode != PresentationMode.POKEMON) return this
-        val maxGen = spriteGeneration.maxGen
-        return copy(
-            attackingPokemon = randomPokemonForTypes(attackingType, maxGeneration = maxGen),
-            defendingPokemon = if (defendingType2 != null)
-                randomPokemonForTypes(defendingType, defendingType2, maxGeneration = maxGen)
-            else
-                randomPokemonForTypes(defendingType, maxGeneration = maxGen),
-        )
-    }
-
-    private fun QuizQuestion.hasPokemon(): Boolean {
-        if (presentationMode != PresentationMode.POKEMON) return true
-        val maxGen = spriteGeneration.maxGen
-        val atkOk = hasPokemonForTypes(attackingType, maxGeneration = maxGen)
-        val defOk = if (defendingType2 != null)
-            hasPokemonForTypes(defendingType, defendingType2, maxGeneration = maxGen)
-        else
-            hasPokemonForTypes(defendingType, maxGeneration = maxGen)
-        return atkOk && defOk
-    }
-
-    private fun generateUniqueQuestion(): QuizQuestion {
-        repeat(100) {
-            val q = generateQuestion(generation, quizMode, difficulty)
-            if (seenKeys.add(questionKey(q)) && q.hasPokemon()) return q.withPokemon()
-        }
-        return generateQuestion(generation, quizMode, difficulty).withPokemon()
-    }
-
     private fun newRound(): QuizState {
         seenKeys.clear()
         val count = quizLength ?: 1
-        val questions = buildList {
-            repeat(count * 50) {
-                if (size == count) return@repeat
-                val q = generateQuestion(generation, quizMode, difficulty)
-                if (seenKeys.add(questionKey(q)) && q.hasPokemon()) add(q.withPokemon())
-            }
-            while (size < count) add(generateQuestion(generation, quizMode, difficulty).withPokemon())
-        }
+        val questions = generateQuestions.buildInitialQuestions(
+            count, generation, quizMode, difficulty, presentationMode, spriteGeneration, seenKeys
+        )
         return QuizState(quizLength = quizLength, questions = questions)
     }
 
@@ -164,7 +129,9 @@ class QuizViewModel(
                 }
             } else {
                 val newQuestions = if (s.quizLength == null)
-                    s.questions + generateUniqueQuestion()
+                    s.questions + generateQuestions.generateNext(
+                        generation, quizMode, difficulty, presentationMode, spriteGeneration, seenKeys
+                    )
                 else
                     s.questions
                 _state.update {
@@ -196,23 +163,15 @@ class QuizViewModel(
             spriteGeneration: SpriteGeneration,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
+                val app = application as PokeTypesApp
+                val enrichUseCase = EnrichWithPokemonUseCase(app.pokemonRepository)
                 QuizViewModel(
                     application, generation, quizMode, difficulty, quizLength, presentationMode, spriteGeneration,
                     DataStoreScoreRepository(application),
                     RoomTypeStatRepository(TypeStatDatabase.get(application).typeStatDao()),
+                    GenerateQuizQuestionsUseCase(enrichUseCase),
                 )
             }
         }
-    }
-}
-
-private fun questionKey(q: QuizQuestion): Any {
-    val def2 = q.defendingType2
-    return if (def2 == null) {
-        Pair(q.attackingType, q.defendingType)
-    } else {
-        val lo = minOf(q.defendingType.ordinal, def2.ordinal)
-        val hi = maxOf(q.defendingType.ordinal, def2.ordinal)
-        Triple(q.attackingType, lo, hi)
     }
 }

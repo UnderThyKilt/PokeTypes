@@ -6,9 +6,14 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import com.underthykilt.poketypes.data.pokemon.AssetPokemonRepository
+import com.underthykilt.poketypes.data.pokemon.PokemonRepository
 import okio.Path.Companion.toOkioPath
 
 class PokeTypesApp : Application(), SingletonImageLoader.Factory {
+
+    val pokemonRepository: PokemonRepository by lazy { AssetPokemonRepository(this) }
+
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             .diskCache {

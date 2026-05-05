@@ -9,6 +9,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+internal const val QUIZ_LENGTH = 10
+
 interface ScoreRepository {
     fun loadScores(mode: String): Flow<List<Int>>
     suspend fun saveScore(mode: String, score: Int)

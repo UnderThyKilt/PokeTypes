@@ -38,16 +38,15 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.underthykilt.poketypes.data.DOUBLE_CHOICES
 import com.underthykilt.poketypes.data.PokemonType
 import com.underthykilt.poketypes.data.QuizMode
+import com.underthykilt.poketypes.data.SINGLE_CHOICES
 import com.underthykilt.poketypes.data.multiplierLabel
 import com.underthykilt.poketypes.data.pokemon.PokemonEntry
 import com.underthykilt.poketypes.ui.components.TypeBadge
 import com.underthykilt.poketypes.ui.theme.CorrectGreen
 import com.underthykilt.poketypes.ui.theme.WrongRed
-
-private val SINGLE_CHOICES = listOf(0f, 0.5f, 1f, 2f)
-private val DOUBLE_CHOICES = listOf(0f, 0.25f, 0.5f, 1f, 2f, 4f)
 
 @Composable
 fun QuizContent(
@@ -59,7 +58,8 @@ fun QuizContent(
     onEndQuiz: () -> Unit,
 ) {
     val q = state.questions[state.questionIndex]
-    val choices = if (quizMode == QuizMode.SINGLE) SINGLE_CHOICES else DOUBLE_CHOICES
+    val isReverseMode = q.answerChoices.isNotEmpty()
+    val forwardChoices = if (quizMode == QuizMode.SINGLE) SINGLE_CHOICES else DOUBLE_CHOICES
     val answered = state.selected != null
     val answeredCorrectly = state.selected == q.correctAnswer
     val isEndless = state.quizLength == null
@@ -98,91 +98,157 @@ fun QuizContent(
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    "How effective is",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-                Spacer(Modifier.height(12.dp))
-                if (pokemonMode && q.attackingPokemon != null) {
-                    PokemonCard(q.attackingPokemon, q.attackingType)
-                } else {
-                    TypeBadge(q.attackingType, large = true)
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "attacking",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-                Spacer(Modifier.height(8.dp))
-                val def2 = q.defendingType2
-                if (def2 != null) {
-                    if (pokemonMode && q.defendingPokemon != null) {
-                        PokemonCard(q.defendingPokemon, q.defendingType, def2)
+                if (isReverseMode) {
+                    Text(
+                        "Which type receives",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        multiplierLabel(q.promptMultiplier ?: 1f),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "damage from",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (pokemonMode && q.attackingPokemon != null) {
+                        PokemonCard(q.attackingPokemon, q.attackingType)
                     } else {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        TypeBadge(q.attackingType, large = true)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("?", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Text(
+                        "How effective is",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (pokemonMode && q.attackingPokemon != null) {
+                        PokemonCard(q.attackingPokemon, q.attackingType)
+                    } else {
+                        TypeBadge(q.attackingType, large = true)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "attacking",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    val def2 = q.defendingType2
+                    if (def2 != null) {
+                        if (pokemonMode && q.defendingPokemon != null) {
+                            PokemonCard(q.defendingPokemon, q.defendingType, def2)
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TypeBadge(q.defendingType, large = true)
+                                Text(
+                                    " / ",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                                TypeBadge(def2, large = true)
+                            }
+                        }
+                    } else {
+                        if (pokemonMode && q.defendingPokemon != null) {
+                            PokemonCard(q.defendingPokemon, q.defendingType)
+                        } else {
                             TypeBadge(q.defendingType, large = true)
-                            Text(
-                                " / ",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            )
-                            TypeBadge(def2, large = true)
                         }
                     }
-                } else {
-                    if (pokemonMode && q.defendingPokemon != null) {
-                        PokemonCard(q.defendingPokemon, q.defendingType)
-                    } else {
-                        TypeBadge(q.defendingType, large = true)
-                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("?", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.height(8.dp))
-                Text("?", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        choices.forEach { choice ->
-            val isCorrect = choice == q.correctAnswer
-            val isSelected = choice == state.selected
-
-            val containerColor = when {
-                !answered -> MaterialTheme.colorScheme.surface
-                isCorrect -> CorrectGreen
-                isSelected && !isCorrect -> WrongRed
-                else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+        if (isReverseMode) {
+            q.answerChoices.forEachIndexed { i, (type1, type2) ->
+                val choice = i.toFloat()
+                val isCorrect = choice == q.correctAnswer
+                val isSelected = choice == state.selected
+                val containerColor = when {
+                    !answered -> MaterialTheme.colorScheme.surface
+                    isCorrect -> CorrectGreen
+                    isSelected && !isCorrect -> WrongRed
+                    else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                }
+                Button(
+                    onClick = { onSelectAnswer(choice) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp)
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = containerColor),
+                    enabled = !answered || isCorrect || isSelected
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        TypeBadge(type1, large = false)
+                        if (type2 != null) {
+                            Text(
+                                " / ",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            )
+                            TypeBadge(type2, large = false)
+                        }
+                    }
+                }
             }
-
-            Button(
-                onClick = { onSelectAnswer(choice) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 3.dp)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = containerColor),
-                enabled = !answered || isCorrect || isSelected
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        multiplierLabel(choice),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        style = TextStyle(drawStyle = Stroke(width = 6f)),
-                        color = MaterialTheme.colorScheme.surface
-                    )
-                    Text(
-                        multiplierLabel(choice),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+        } else {
+            forwardChoices.forEach { choice ->
+                val isCorrect = choice == q.correctAnswer
+                val isSelected = choice == state.selected
+                val containerColor = when {
+                    !answered -> MaterialTheme.colorScheme.surface
+                    isCorrect -> CorrectGreen
+                    isSelected && !isCorrect -> WrongRed
+                    else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                }
+                Button(
+                    onClick = { onSelectAnswer(choice) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp)
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = containerColor),
+                    enabled = !answered || isCorrect || isSelected
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            multiplierLabel(choice),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(drawStyle = Stroke(width = 6f)),
+                            color = MaterialTheme.colorScheme.surface
+                        )
+                        Text(
+                            multiplierLabel(choice),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }
@@ -191,16 +257,45 @@ fun QuizContent(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(12.dp))
                 if (!answeredCorrectly) {
-                    val def2 = q.defendingType2
-                    val defLabel = def2
-                        ?.let { "${q.defendingType.displayName}/${it.displayName}" }
-                        ?: q.defendingType.displayName
-                    Text(
-                        "${q.attackingType.displayName} vs $defLabel = ${multiplierLabel(q.correctAnswer)}",
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center
-                    )
+                    if (isReverseMode) {
+                        val selectedIdx = state.selected?.toInt()
+                        val selectedPair = selectedIdx?.let { q.answerChoices.getOrNull(it) }
+                        val selectedMult = selectedIdx?.let { q.answerChoiceMultipliers.getOrNull(it) }
+                        if (selectedPair != null) {
+                            val selectedLabel = selectedPair.second
+                                ?.let { "${selectedPair.first.displayName}/${it.displayName}" }
+                                ?: selectedPair.first.displayName
+                            val correctPair = q.answerChoices.getOrNull(q.correctAnswer.toInt())
+                            val correctLabel = correctPair?.second
+                                ?.let { "${correctPair.first.displayName}/${it.displayName}" }
+                                ?: correctPair?.first?.displayName
+                            Text(
+                                "$selectedLabel takes ${multiplierLabel(selectedMult ?: 0f)}, not ${multiplierLabel(q.promptMultiplier ?: 1f)}",
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                            if (correctLabel != null) {
+                                Text(
+                                    "Correct: $correctLabel",
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    } else {
+                        val def2 = q.defendingType2
+                        val defLabel = def2
+                            ?.let { "${q.defendingType.displayName}/${it.displayName}" }
+                            ?: q.defendingType.displayName
+                        Text(
+                            "${q.attackingType.displayName} vs $defLabel = ${multiplierLabel(q.correctAnswer)}",
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                 }
                 Button(

@@ -81,7 +81,31 @@ class MainActivity : ComponentActivity() {
                                             settings.spriteGeneration.name,
                                         )
                                     )
-                                }
+                                },
+                                onReverseSingleQuiz = {
+                                    navController.navigate(
+                                        QuizRoute(
+                                            settings.generation.name,
+                                            QuizMode.REVERSE_SINGLE.name,
+                                            settings.difficulty.name,
+                                            settings.quizLength.name,
+                                            settings.presentationMode.name,
+                                            settings.spriteGeneration.name,
+                                        )
+                                    )
+                                },
+                                onReverseDualQuiz = {
+                                    navController.navigate(
+                                        QuizRoute(
+                                            settings.generation.name,
+                                            QuizMode.REVERSE_DOUBLE.name,
+                                            settings.difficulty.name,
+                                            settings.quizLength.name,
+                                            settings.presentationMode.name,
+                                            settings.spriteGeneration.name,
+                                        )
+                                    )
+                                },
                             )
                         }
                         composable<SettingsRoute> {

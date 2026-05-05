@@ -1,13 +1,13 @@
 # PokeTypes
 
-An Android app for learning Pokémon type matchups. Study the full type chart, test your knowledge with single and dual-type quizzes across three game generations, and track your per-type accuracy over time.
+An Android app for learning Pokémon type matchups. Study the full type chart, test your knowledge with single, dual-type, and reverse quizzes across three game generations, and track your per-type accuracy over time.
 
 ---
 
 ## Screens
 
 ### Home
-Entry point. Shows the current settings summary and launches any mode.
+Entry point. Shows the current settings summary and launches any mode. Classic quiz modes and Reverse quiz modes are shown in separate sections.
 
 ### Options
 Persistent settings screen:
@@ -26,14 +26,16 @@ An 18×18 scrollable grid of type matchups. Tap any attacking type to highlight 
 - Neutral — normal (1×)
 
 ### Quiz
-Two modes:
+Four modes:
 
-| Mode | Defending types | Answer choices |
-|------|----------------|----------------|
-| Single Type | 1 | 0×, ½×, 1×, 2× |
-| Dual Type | 2 | 0×, ¼×, ½×, 1×, 2×, 4× |
+| Mode | Question | Answer choices |
+|------|----------|----------------|
+| Single Type | How effective is `[type]` vs `[type]`? | 0×, ½×, 1×, 2× |
+| Dual Type | How effective is `[type]` vs `[type]/[type]`? | 0×, ¼×, ½×, 1×, 2×, 4× |
+| Reverse Single | Which type receives `[mult]` from `[type]`? | 4 type choices |
+| Reverse Dual | Which type pair receives `[mult]` from `[type]`? | 4 type-pair choices |
 
-Questions are generated without duplicates within a session. Correct answers turn green, wrong answers turn red. A streak counter appears on consecutive correct answers.
+Questions are generated without duplicates within a session. Correct answers turn green, wrong answers turn red. If a wrong answer is selected, feedback shows the actual effectiveness of the chosen type. A streak counter appears on consecutive correct answers.
 
 In **Classic** style, questions show colored type badges. In **Pokémon** style, questions show a Pokémon sprite, Pokédex number, name, and small type badge instead. Sprites are downloaded on first use and cached persistently — no internet required after that.
 
@@ -62,11 +64,11 @@ Per-type accuracy bars for attacking and defending matchups, sorted worst-first.
 
 ```
 app/src/main/java/com/underthykilt/poketypes/
-├── PokeTypesApp.kt          # Application subclass; configures Coil with persistent sprite cache
+├── PokeTypesApp.kt          # Application subclass; Coil persistent sprite cache; pokemonRepository singleton
 ├── MainActivity.kt          # Single activity, NavHost, settings state
 ├── data/
 │   ├── TypeChart.kt         # PokemonType enum, Generation enum, type chart logic
-│   ├── QuizLogic.kt         # QuizQuestion, generateQuestion(), performanceMessage()
+│   ├── QuizLogic.kt         # QuizQuestion, QuizMode (incl. REVERSE_SINGLE/DOUBLE), generateQuestion()
 │   ├── Difficulty.kt        # Difficulty enum + filteredTypes()
 │   ├── QuizLength.kt        # QuizLength enum (FIVE / TEN / TWENTY / ENDLESS)
 │   ├── PresentationMode.kt  # PresentationMode enum (CLASSIC / POKEMON)
@@ -78,10 +80,14 @@ app/src/main/java/com/underthykilt/poketypes/
 │   ├── TypeStatDatabase.kt  # RoomDatabase singleton
 │   ├── TypeStatRepository.kt# TypeStatRepository interface + RoomTypeStatRepository
 │   └── pokemon/
-│       ├── PokemonEntry.kt  # PokemonEntry(id, name, generation) + spriteUrl property
-│       └── TypePokemon.kt   # Auto-generated: all 1025 Pokémon; randomPokemonForTypes() / hasPokemonForTypes()
+│       ├── PokemonEntry.kt      # PokemonEntry(id, name, generation) + spriteUrl property
+│       ├── PokemonRepository.kt # PokemonRepository interface + AssetPokemonRepository (reads pokemon.json)
+│       └── TypePokemon.kt       # Pointer only — data lives in app/src/main/assets/pokemon.json
+├── domain/
+│   ├── EnrichWithPokemonUseCase.kt      # Attaches PokemonEntry sprites to a QuizQuestion
+│   └── GenerateQuizQuestionsUseCase.kt  # Builds deduplicated question lists; drives endless mode
 └── ui/
-    ├── HomeScreen.kt        # Mode buttons, settings summary, SegmentedSelector<T>
+    ├── HomeScreen.kt        # Mode buttons (Classic + Reverse sections), settings summary
     ├── SettingsScreen.kt    # Options screen
     ├── StudyScreen.kt       # 18×18 scrollable type chart grid
     ├── QuizScreen.kt        # Quiz scaffold
@@ -93,38 +99,43 @@ app/src/main/java/com/underthykilt/poketypes/
     │   ├── StatsViewModel.kt
     │   └── StatsScreen.kt
     ├── quiz/
-    │   ├── QuizViewModel.kt # AndroidViewModel; owns QuizState via StateFlow
-    │   ├── QuizContent.kt   # Active question card; Classic or Pokémon rendering
-    │   └── ResultsScreen.kt # Score, dot summary, history
+    │   ├── QuizViewModel.kt # AndroidViewModel; owns QuizState; delegates to use cases
+    │   ├── QuizContent.kt   # Active question card; Classic/Pokémon/Reverse rendering
+    │   └── ResultsScreen.kt # Score, dot summary, wrong-answer review, history
     └── theme/
         ├── Colors.kt
         └── Theme.kt         # Light + dark color schemes
 
+app/src/main/assets/
+└── pokemon.json             # 1025 base-form Pokémon — [{id, name, generation, types}]
+                             # Generated by test/generate_pokemon_data.py. Do NOT edit by hand.
+
 test/
-├── check_sprites.py         # Verify all PokemonEntry sprite URLs return HTTP 200
-└── generate_pokemon_data.py # Fetch all Pokémon from PokéAPI and regenerate TypePokemon.kt
+├── check_sprites.py         # Verify all entries in pokemon.json have reachable sprite URLs
+└── generate_pokemon_data.py # Fetch all Pokémon from PokéAPI and write pokemon.json
 ```
 
 ### Key types
 
 - **`PokemonType`** — enum of all 18 types, each with `displayName` and `color`
 - **`Generation`** — `GEN1`, `GEN2_5`, `GEN6_PLUS`; drives which chart is used
-- **`QuizMode`** — `SINGLE` or `DOUBLE`
+- **`QuizMode`** — `SINGLE`, `DOUBLE`, `REVERSE_SINGLE`, `REVERSE_DOUBLE`
 - **`QuizLength`** — `FIVE`, `TEN`, `TWENTY`, or `ENDLESS` (count is `null` for endless)
 - **`PresentationMode`** — `CLASSIC` or `POKEMON`
 - **`SpriteGeneration`** — `GEN1`–`GEN8` or `ALL`; filters Pokémon sprite pool by max generation
-- **`QuizQuestion`** — types, correct answer, and optional `PokemonEntry` fields for Pokémon mode
+- **`QuizQuestion`** — types, correct answer, optional `PokemonEntry` fields, and `answerChoices` / `promptMultiplier` for reverse modes
 - **`AppSettings`** — all six settings collected into one data class from `SettingsRepository`
 - **`PokemonEntry`** — `(id, name, generation)` with a computed `spriteUrl` property
+- **`PokemonRepository`** — interface for type-keyed Pokémon lookups; backed by `AssetPokemonRepository`
 
 ### Key functions
 
 - `getEffectiveness(attacking, defending, gen): Float` — core chart lookup (`TypeChart.kt`)
 - `availableTypes(gen)` / `filteredTypes(gen, difficulty)` — type pool for a given gen + difficulty
 - `multiplierLabel(mult)` — float → `"½×"` or `"4×"` display string
-- `generateQuestion(gen, mode, difficulty)` — picks random types and computes multiplier
-- `randomPokemonForTypes(vararg types, maxGeneration)` — random `PokemonEntry` for exact type combo within gen cap
-- `hasPokemonForTypes(vararg types, maxGeneration)` — deterministic existence check used to filter invalid questions
+- `generateQuestion(gen, mode, difficulty)` — picks random types and computes multiplier (all four modes)
+- `PokemonRepository.randomForTypes(vararg types, maxGeneration)` — random `PokemonEntry` for exact type combo within gen cap
+- `PokemonRepository.hasForTypes(vararg types, maxGeneration)` — deterministic existence check used to filter invalid questions
 - `SegmentedSelector<T>()` — generic segmented control used throughout settings and home
 
 ---
@@ -154,13 +165,13 @@ Sprite images are fetched from the PokéAPI GitHub sprites repository on first l
 
 ### Regenerating Pokémon data
 
-`TypePokemon.kt` is auto-generated from PokéAPI. To refresh it (e.g. after a new generation is released):
+`pokemon.json` is auto-generated from PokéAPI. To refresh it (e.g. after a new generation is released):
 
 ```bash
 python test/generate_pokemon_data.py
 ```
 
-API responses are cached to `test/.pokeapi_cache/` so re-runs are instant without network access.
+Writes `app/src/main/assets/pokemon.json` as a flat JSON array of `{id, name, generation, types}` objects. API responses are cached to `test/.pokeapi_cache/` so re-runs are instant without network access.
 
 ### Verifying sprite URLs
 
@@ -168,4 +179,43 @@ API responses are cached to `test/.pokeapi_cache/` so re-runs are instant withou
 python test/check_sprites.py
 ```
 
-Checks every `PokemonEntry` in `TypePokemon.kt` with a HEAD request and reports any that return non-200.
+Reads every entry in `pokemon.json` and checks its sprite URL with a HEAD request, reporting any non-200 responses.
+
+---
+
+## Testing
+
+Unit tests live in `app/src/test/` and run on the JVM (no device needed).
+
+| Test file | What it covers |
+|-----------|---------------|
+| `TypeChartTest` | Type effectiveness values across all three generations |
+| `QuizLogicTest` | Forward and reverse question generation, answer choice correctness, `questionKey` deduplication |
+| `ScoreHistoryTest` | Score parsing, appending, and history capping |
+| `EnrichWithPokemonUseCaseTest` | Classic no-op, Pokémon enrichment for forward/reverse modes, `hasRequiredPokemon` |
+| `GenerateQuizQuestionsUseCaseTest` | Question count, `seenKeys` deduplication, generation filtering, difficulty filtering |
+| `SpriteUrlTest` | All entries in `pokemon.json` have reachable HTTP 200 sprite URLs (run on demand, requires internet) |
+
+### Running tests
+
+- **Single class** — click the green ▶ gutter icon next to the class or any `@Test` method in the editor
+- **Single file** — right-click the file in the Project panel → Run
+- **Named Gradle tasks** (Gradle panel → app → Tasks → verification):
+  - `testQuizLogic`
+  - `testEnrichWithPokemonUseCase`
+  - `testGenerateQuizQuestionsUseCase`
+- **All unit tests** — `testDebugUnitTest`
+
+### Test dependencies
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| JUnit 4 | 4.13.2 | Core test runner |
+| kotlinx-coroutines-test | 1.8.1 | `runTest`, `TestScope` for suspend functions and `StateFlow` |
+| Turbine | 1.2.0 | Flow/StateFlow assertion DSL |
+| MockK | 1.13.12 | Kotlin-native mocking |
+| Robolectric | 4.13 | Run Android framework code (Context, assets) on JVM |
+| room-testing | 2.7.1 | In-memory Room database for DAO tests |
+| androidx-test-ext-junit | 1.2.1 | `@RunWith(AndroidJUnit4::class)` for instrumented tests |
+| espresso-core | 3.6.1 | UI interaction tests on device/emulator |
+| Compose UI test | (BOM) | `composeTestRule.onNodeWithText(...)` Compose assertions |
